@@ -2,8 +2,8 @@ import numpy as np
 import torch
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append('/home/jiayu/SleepApnea4Ubicomp_Feb/Code')
-sys.path.append('/home/jiayu/SleepApnea4Ubicomp_Feb')
+sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
+sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 from utils import seed_everything, npy2dataset_true, npy2dataset_true_MTL_REC, choose_gpu_by_model_process_count
 from utils_dl import train_classifier, train_classifier_MTL, train_classifier_MTL_REC
 from models.clf import  ApneaClassifier_PatchTST_MTL_REC

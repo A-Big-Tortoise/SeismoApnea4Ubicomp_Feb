@@ -5,8 +5,8 @@ import numpy as np
 import torch
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append('/home/jiayu/SleepApnea4Ubicomp_Feb/Code')
-sys.path.append('/home/jiayu/SleepApnea4Ubicomp_Feb')
+sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
+sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 from Code.utils_dl import ApneaDataset, ApneaDataset_MTL, BalancedBatchSampler, ApneaDataset_MTL_REC
 from Code.utils_dsp import denoise, denoise_band, normalize, modify_magnitude_with_gaussian_noise, denoise_iter
 from statsmodels.tsa.stattools import acf

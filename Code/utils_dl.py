@@ -6,8 +6,8 @@ from sklearn.metrics import balanced_accuracy_score, f1_score, confusion_matrix
 import numpy as np
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append('/home/jiayu/SleepApnea4Ubicomp_Feb/Code')
-sys.path.append('/home/jiayu/SleepApnea4Ubicomp_Feb')
+sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
+sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 from Code.utils_dsp import modify_magnitude_with_gaussian_noise_batch
 
 class SupConLoss(nn.Module):

@@ -1,7 +1,7 @@
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append('/home/jiayu/SleepApnea4Ubicomp_Feb/Code')
-sys.path.append('/home/jiayu/SleepApnea4Ubicomp_Feb')
+sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
+sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 import numpy as np
 from sklearn.model_selection import KFold
 import pandas as pd

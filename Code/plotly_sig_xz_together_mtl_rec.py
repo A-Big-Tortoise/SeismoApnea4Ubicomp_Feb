@@ -3,8 +3,8 @@ import plotly.graph_objects as go
 import os, sys
 import yaml
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append('/home/jiayu/SleepApnea4Ubicomp_Feb/Code')
-sys.path.append('/home/jiayu/SleepApnea4Ubicomp_Feb')
+sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
+sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 import subprocess
 from Code.utils_dsp import denoise, normalize_1d
 from Code.models.clf import ApneaClassifier_PatchTST_MTL_REC
