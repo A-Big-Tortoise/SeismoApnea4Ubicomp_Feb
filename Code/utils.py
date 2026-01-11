@@ -941,17 +941,25 @@ def npy2dataset_true_MTL(data_path, fold_idx, args):
 	"""Shape of each batch: [batch_size, channels, seq_len]"""
 	train_data, val_data, test_data = load_train_val_test_data(data_path, fold_idx)
 
-
 	X_train, Y_train, _, Stages_train, Events_train, others_train = data_preprocess_MTL(train_data, 'train')
 	X_val, Y_val, _, Stages_val, Events_val, others_val = data_preprocess_MTL(val_data, 'val')
 	X_test, Y_test, _, Stages_test, Events_test, others_test = data_preprocess_MTL(test_data, 'test')
 
 	print(f'X_train: {X_train.shape}, X_val: {X_val.shape}, X_test: {X_test.shape}')
 
-	Signals_train = np.stack([X_train, Y_train], axis=-1) 
-	Signals_val = np.stack([X_val, Y_val], axis=-1)
-	Signals_test = np.stack([X_test, Y_test], axis=-1)
-	print(f'X_train: {X_train.shape}, Y_train: {Y_train.shape}, X_test: {X_test.shape}, Y_test: {Y_test.shape}')
+	if args.XYZ == 'XY':
+		Signals_train = np.stack([X_train, Y_train], axis=-1) 
+		Signals_val = np.stack([X_val, Y_val], axis=-1)
+		Signals_test = np.stack([X_test, Y_test], axis=-1)
+	elif args.XYZ == 'X':
+		Signals_train = np.expand_dims(X_train, axis=-1)
+		Signals_val = np.expand_dims(X_val, axis=-1)
+		Signals_test = np.expand_dims(X_test, axis=-1)
+	elif args.XYZ == 'Y':
+		Signals_train = np.expand_dims(Y_train, axis=-1)
+		Signals_val = np.expand_dims(Y_val, axis=-1)
+		Signals_test = np.expand_dims(Y_test, axis=-1)
+
 
 	print('...Data Distribution...')
 	print('In Training')
@@ -967,13 +975,6 @@ def npy2dataset_true_MTL(data_path, fold_idx, args):
 	print(f'Apnea/Non-Apnea: {np.sum(Events_test==1)}/{np.sum(Events_test==0)-np.sum(Stages_test==1)}')
 
 	train_dataset = ApneaDataset_MTL(Signals_train, Stages_train, Events_train)
-
-	# batch_sampler = ThreeGroupRatioBatchSampler(
-	# 	stages=Stages_train,
-	# 	events=Events_train,
-	# 	batch_size=args.batch_size,
-	# 	drop_last=True)
-	# train_loader = DataLoader(train_dataset, batch_sampler=batch_sampler)
 
 	train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, drop_last=True)
 	val_dataset = ApneaDataset_MTL(Signals_val, Stages_val, Events_val, others_val)

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from models.tcn import TemporalConvNet
 from models.inception import Inception
-# from models.patchtst import PatchTST_backbone
+from models.patchtst import PatchTST_backbone
 from models.patchtst_exportable import PatchTST_backbone_exp
 from models.medformer import Medformer
 
@@ -474,7 +474,7 @@ class ApneaClassifier_PatchTST_MTL_REC(nn.Module):
     def __init__(self, input_size, seq_len, patch_len, stride, n_layers, d_model,
                   n_heads, d_ff, num_classes, axis, dropout, mask_ratio):
         super(ApneaClassifier_PatchTST_MTL_REC, self).__init__()
-        self.encoder = PatchTST_backbone_exp(c_in = input_size, 
+        self.encoder = PatchTST_backbone(c_in = input_size, 
                                         context_window = seq_len,
                                         patch_len = patch_len,
                                         stride = stride,
@@ -574,113 +574,4 @@ class ApneaClassifier_PatchTST_MTL_REC(nn.Module):
         y_Apnea = self.classifier_Apnea(y_rep_Apnea)
         
         return y_Stage, y_Apnea, projected_X, y_rep_Stage, y_rep_Apnea, reconstructed_tho, reconstructed_abd
-
-
-
-class ApneaClassifier_Medformer_MTL(nn.Module):
-    def __init__(self, input_size, seq_len, n_layers, output_attention, patch_len_lst, augmentations, d_model, activation, no_inter_attn, n_heads, d_ff, num_classes, dropout):
-        super(ApneaClassifier_Medformer_MTL, self).__init__()
-
-
-        self.model = Medformer(
-            configs=type('configs', (object,), {
-                'enc_in': input_size,
-                'output_attention': output_attention,
-                'patch_len_list': patch_len_lst,
-                'seq_len': seq_len,
-                'augmentations': augmentations,
-                'd_model': d_model,
-                'n_heads': n_heads,
-                'e_layers': n_layers,
-                'd_ff': d_ff,
-                'dropout': dropout,
-                'single_channel': False,
-                'activation': activation,
-                'num_class': num_classes,
-                'no_inter_attn': no_inter_attn,
-            })()
-        ) 
-
-    def forward(self, x):
-        """
-        x: [B, C, T]
-        """
-        y_Stage, y_Apnea, _, y_rep_Stage, y_rep_Apnea = self.model(x)  # [B, C, d_model, patch_num]
-        return y_Stage, y_Apnea, None, y_rep_Stage, y_rep_Apnea
-
-
-
-class ApneaClassifier_Dual_PatchTST(nn.Module):
-    def __init__(self, input_size, seq_len, patch_len, stride, n_layers, d_model, n_heads, d_ff, num_classes, axis, dropout):
-        super(ApneaClassifier_Dual_PatchTST, self).__init__()
-        self.encoder_R = PatchTST_backbone(c_in = input_size, 
-                                        context_window = seq_len,
-                                        patch_len = patch_len,
-                                        stride = stride,
-                                        max_seq_len = int(seq_len*1.5),
-                                        n_layers = n_layers,
-                                        d_model = d_model,
-                                        n_heads = n_heads,
-                                        d_ff = d_ff,
-                                        attn_dropout = dropout,
-                                        dropout = dropout,
-                                        act = "gelu")
-
-
-        self.encoder_H = PatchTST_backbone(c_in = input_size, 
-                                        context_window = seq_len,
-                                        patch_len = patch_len,
-                                        stride = stride,
-                                        max_seq_len = int(seq_len*1.5),
-                                        n_layers = n_layers,
-                                        d_model = d_model,
-                                        n_heads = n_heads,
-                                        d_ff = d_ff,
-                                        attn_dropout = dropout,
-                                        dropout = dropout,
-                                        act = "gelu")
-        
-        self.feature_extractor = nn.Sequential(
-            nn.Linear(d_model*axis*2, d_model),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(d_model, d_model//2),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(d_model//2, d_model//4),
-        )
-
-        self.projection = nn.Sequential(
-            nn.Linear(d_model*axis*2, d_model*axis),
-            nn.ReLU(),
-            nn.Linear(d_model*axis, d_model))
-
-
-        self.classifier = nn.Linear(d_model//4, num_classes)
-
-
-    def forward(self, x):
-        # x [B, 2 * C, T]
-        # print(f'x: {x.shape}')
-        features_R = self.encoder_R(x[:, :2, :])  # RR
-        features_H = self.encoder_H(x[:, 2:, :])  # HR
-        # print(f'features_R: {features_R.shape}, features_H: {features_H.shape}')
-
-        features_R = features_R.mean(-1)  # [B, C, nhid]
-        features_H = features_H.mean(-1)  # [B, C, nhid]
-        # print(f'features_R after mean: {features_R.shape}, features_H after mean: {features_H.shape}')
-        pooled_R = features_R.reshape(features_R.shape[0], -1)  # [B, nhid_x + nhid_y]
-        pooled_H = features_H.reshape(features_H.shape[0], -1)  # [B, nhid_x + nhid_y]
-        # print(f'pooled_R: {pooled_R.shape}, pooled_H: {pooled_H.shape}')
-        pooled_X = torch.cat((pooled_R, pooled_H), dim=1)
-        # print(f'pooled_X: {pooled_X.shape}')
-
-        projected_X = self.projection(pooled_X)  # [B, projection_dim]
-        y_rep = self.feature_extractor(pooled_X)  # [B, d_model//4]
-        # print(f'y_rep: {y_rep.shape}')
-
-        y = self.classifier(y_rep)
-
-        return y, projected_X, y_rep
-   
 

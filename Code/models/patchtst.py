@@ -140,8 +140,7 @@ class TSTiEncoder(nn.Module):  #i means channel-independent
         self.patch_num = patch_num
         self.patch_len = patch_len
 
-        print(f'PatchTSTiEncoder: patch_num={patch_num}, patch_len={patch_len}')
-        
+
         # Input encoding
         q_len = patch_num
         self.W_P = nn.Linear(patch_len, d_model)        # Eq 1: projection of feature vectors onto a d-dim vector space
@@ -455,61 +454,13 @@ class PatchTST_backbone(nn.Module):
 
     def forward(self, z):                                                                   # z: [bs x nvars x seq_len]
         # z [B, C, T] -> [B, C, T//patch_len, patch_len]
-        # do patching
-        # print(f'shape before patching: {z.shape}')
         if self.padding_patch == 'end':
             z = self.padding_patch_layer(z)
-        # print(f'shape after padding: {z.shape}')
         # unfold is extracting patches in last dimension using a sliding window
-        z = z.unfold(dimension=-1, size=self.patch_len, step=self.stride)   
-        print(f'shape after unfold: {z.shape}')                                       # z: [bs x nvars x patch_num x patch_len]
-        # print(f'shape after unfold: {z.shape}')                                       # z: [bs x nvars x patch_num x patch_len]
+        z = z.unfold(dimension=-1, size=self.patch_len, step=self.stride)                                   # z: [bs x nvars x patch_num x patch_len]
                      # z: [bs x nvars x patch_num x patch_len]
         z = z.permute(0,1,3,2)                                                              # z: [bs x nvars x patch_len x patch_num]
-
-        # z = (z - z.mean(dim=2, keepdim=True)) / (z.std(dim=2, keepdim=True) + 1e-8) # z-score normalization
-
-        # z [B, C, patch_len, patch_num]
         # model
-        z = self.backbone(z)                                                                # z: [bs x nvars x d_model x patch_num]
-        return z
- 
-
-
-
-
- # Cell
-class PatchTST_backbone_new(nn.Module):
-    def __init__(self, c_in:int, context_window:int, patch_len:int, 
-                 stride:int, max_seq_len:Optional[int]=1024, 
-                 n_layers:int=3, d_model=128, n_heads=16, 
-                 d_k:Optional[int]=None, d_v:Optional[int]=None,
-                 d_ff:int=256, attn_dropout:float=0., dropout:float=0., 
-                 act:str="gelu", key_padding_mask:bool='auto',
-                 padding_var:Optional[int]=None, 
-                 attn_mask:Optional[Tensor]=None, res_attention:bool=True, 
-                 pre_norm:bool=False, store_attn:bool=True,
-                 pe:str='zeros', learn_pe:bool=True,
-                 verbose:bool=False, **kwargs):
-        
-        super().__init__()
-
-        # Patching
-        self.patch_len = patch_len
-        self.stride = stride
-        patch_num = int((context_window - patch_len)/stride + 1)
-
-        # Backbone 
-        self.backbone = TSTiEncoder(c_in, patch_num=patch_num, patch_len=patch_len, max_seq_len=max_seq_len,
-                                n_layers=n_layers, d_model=d_model, n_heads=n_heads, d_k=d_k, d_v=d_v, d_ff=d_ff,
-                                attn_dropout=attn_dropout, dropout=dropout, act=act, key_padding_mask=key_padding_mask, padding_var=padding_var,
-                                attn_mask=attn_mask, res_attention=res_attention, pre_norm=pre_norm, store_attn=store_attn,
-                                pe=pe, learn_pe=learn_pe, verbose=verbose, **kwargs)
-
-
-    def forward(self, z):                                                                   # z: [bs x nvars x seq_len]
-        # unfold is extracting patches in last dimension using a sliding window
-        z = z.unfold(dimension=-1, size=self.patch_len, step=self.stride)                   # z: [bs x nvars x patch_num x patch_len]
         z = self.backbone(z)                                                                # z: [bs x nvars x d_model x patch_num]
         return z
  
