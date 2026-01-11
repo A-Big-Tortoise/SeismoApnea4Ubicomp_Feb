@@ -1,0 +1,17 @@
+*.npy
+*.png
+*.jpg
+*.pyc
+*.pyo
+*.pyd
+*.zip
+*.csv
+*.json
+*.pth
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
+.idea/
+*.xlsx
+*.html
+*.onnx
