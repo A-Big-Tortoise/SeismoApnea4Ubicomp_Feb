@@ -3,8 +3,8 @@ import plotly.graph_objects as go
 import os, sys
 import yaml
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append('/home/jiayu/SleepApnea4Ubicomp/Code')
-sys.path.append('/home/jiayu/SleepApnea4Ubicomp')
+sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
+sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
 import subprocess
 from Code.utils_dsp import denoise, normalize_1d
 from Code.models.clf import ApneaClassifier_PatchTST_MTL
@@ -280,9 +280,14 @@ def plot_all_concatenated_signals(signals,
 	return server_file
 
 
-def inference(X_concat, Y_concat, model, device, step_sig, threshold):
-	model_input = np.stack([X_concat, Y_concat], axis=0)  # shape (2, N)
-	model_input = model_input.reshape(1, 2, -1)  # shape (1, 2, N)
+def inference(X_concat, Y_concat, model, device, step_sig, threshold, XY=None):
+	if XY is None or XY == 'XY':
+		model_input = np.stack([X_concat, Y_concat], axis=0)  # shape (2, N)
+		model_input = model_input.reshape(1, 2, -1)  # shape (1, 2, N)
+	elif XY == 'X':
+		model_input = X_concat.reshape(1, 1, -1)  # shape (1, 1, N)
+	elif XY == 'Y':
+		model_input = Y_concat.reshape(1, 1, -1)  # shape (1, 1, N)
 
 	batch_size = 512
 
@@ -382,7 +387,7 @@ def get_wake_masks_29(SleepStage_concat, step_sleep):
 	return wake_masks
 
 
-def process_allnight_data(data, denoising=False):
+def process_allnight_data(data, duration=60, overlap=30, denoising=False):
 	step_seconds = duration - overlap
 	sampling_rate = data.shape[1] / duration
 	step_size = int(step_seconds * sampling_rate)
@@ -457,7 +462,7 @@ def remove_short_ones(x, min_len=2):
 	return np.array(out)
 
 
-def load_configs(config_path):
+def load_configs(config_path):	
 	with open(config_path, "r") as f:
 		config = yaml.safe_load(f)
 		fold2id = config["fold_id_mapping"]

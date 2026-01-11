@@ -376,12 +376,96 @@ class ApneaClassifier_PatchTST(nn.Module):
 
 
 
+class ApneaClassifier_PatchTST_TriClass(nn.Module):
+    def __init__(self, input_size, seq_len, patch_len, stride, n_layers, d_model,
+                  n_heads, d_ff, num_classes, axis, dropout, mask_ratio):
+        super(ApneaClassifier_PatchTST_TriClass, self).__init__()
+        self.encoder = PatchTST_backbone(c_in = input_size, 
+                                        context_window = seq_len,
+                                        patch_len = patch_len,
+                                        stride = stride,
+                                        max_seq_len = int(seq_len*1.5),
+                                        n_layers = n_layers,
+                                        d_model = d_model,
+                                        n_heads = n_heads,
+                                        d_ff = d_ff,
+                                        attn_dropout = dropout,
+                                        dropout = dropout,
+                                        act = "gelu")
+
+        self.mask_ratio = mask_ratio
+
+        self.projection = nn.Sequential(
+            nn.Linear(d_model*axis, d_model*axis),
+            nn.ReLU(),
+            nn.Linear(d_model*axis, d_model))
+
+        self.feature_extractor = nn.Sequential(
+            nn.Linear(d_model*axis, d_model),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_model, d_model//2),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_model//2, d_model//4),
+        )
+
+        self.classifier = nn.Linear(d_model//4, num_classes)
+
+
+
+    def forward(self, x):
+        """
+        x: [B, C, T]
+        """
+        features_X = self.encoder(x)  # [B, C, d_model, patch_num]
+        B, C, D, N = features_X.shape
+        
+        # === 高效的通道独立 Patch Mask ===
+        if self.training and self.mask_ratio > 0:
+            mask_num = int(N * self.mask_ratio)
+            keep_num = N - mask_num
+            
+            # 批量生成随机索引 [B, C, N]
+            rand_idx = torch.rand(B, C, N, device=x.device).argsort(dim=-1)
+            keep_idx = rand_idx[..., :keep_num]  # 保留的patch索引
+            
+            # 创建mask [B, C, 1, N]
+            keep_mask = torch.zeros(B, C, 1, N, device=x.device)
+            keep_mask.scatter_(-1, keep_idx.unsqueeze(2), 1.0)
+            
+            # 应用mask
+            features_X = features_X * keep_mask  # [B, C, d_model, N]
+            
+            # 只对未mask的patch求均值（归一化）
+            features_X = features_X.sum(-1) / keep_num  # [B, C, d_model]
+        else:
+            features_X = features_X.mean(-1)  # [B, C, d_model]
+        
+        # === 下游处理 ===
+        pooled_X = features_X.reshape(B, -1)  # [B, C*d_model]
+        
+        projected_X = self.projection(pooled_X)  # [B, d_model]
+        
+        
+        # y_rep = self.feature_extractor(pooled_X)  # [B, d_model//4]
+        # y = self.classifier(y_rep)
+        y_rep = self.feature_extractor(pooled_X)  # [B, d_model//4]
+        y = self.classifier(y_rep)
+ 
+        return y, projected_X, y_rep
+
+
+
+
+
+
 
 class ApneaClassifier_PatchTST_MTL(nn.Module):
     def __init__(self, input_size, seq_len, patch_len, stride, n_layers, d_model,
                   n_heads, d_ff, num_classes, axis, dropout, mask_ratio):
         super(ApneaClassifier_PatchTST_MTL, self).__init__()
-        self.encoder = PatchTST_backbone(c_in = input_size, 
+        self.encoder = PatchTST_backbone_exp(c_in = input_size, 
                                         context_window = seq_len,
                                         patch_len = patch_len,
                                         stride = stride,
@@ -474,7 +558,7 @@ class ApneaClassifier_PatchTST_MTL_REC(nn.Module):
     def __init__(self, input_size, seq_len, patch_len, stride, n_layers, d_model,
                   n_heads, d_ff, num_classes, axis, dropout, mask_ratio):
         super(ApneaClassifier_PatchTST_MTL_REC, self).__init__()
-        self.encoder = PatchTST_backbone(c_in = input_size, 
+        self.encoder = PatchTST_backbone_exp(c_in = input_size, 
                                         context_window = seq_len,
                                         patch_len = patch_len,
                                         stride = stride,

@@ -85,6 +85,33 @@ class ApneaDataset(Dataset):
         return pos_idx, neg_idx
     
 
+class ApneaDataset_TriClass(Dataset):
+    def __init__(self, data, labels, others=None):
+        """
+        data: ndarray, shape [N, C, L] or [N, L, C]
+        others: optional extra info
+        """
+        # 确保 data shape 为 [N, C, L]
+        data = torch.FloatTensor(data).transpose(1, 2)
+
+        self.data = data
+        self.labels = torch.LongTensor(labels)
+        self.others = torch.FloatTensor(others) if others is not None else None
+
+        # 保留 numpy 版本标签，供 Sampler 使用
+        self.labels_np = self.labels.numpy()
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        if self.others is not None:
+            return self.data[idx], self.labels[idx], self.others[idx]
+        else:
+            return self.data[idx], self.labels[idx]
+
+
+
 class ApneaDataset_MTL(Dataset):
     def __init__(self, data, labels_stage, labels_apnea, others=None):
         """
@@ -114,6 +141,8 @@ class ApneaDataset_MTL(Dataset):
             return self.data[idx], self.labels_stage[idx], self.labels_apnea[idx], self.others[idx]
         else:
             return self.data[idx], self.labels_stage[idx], self.labels_apnea[idx]
+
+
 
 
 class ApneaDataset_MTL_REC(Dataset):
@@ -618,6 +647,148 @@ def train_classifier(model, train_loader, val_loader,
             }, latest_model_path)
 
             
+def train_classifier_TriClass(model, train_loader, val_loader, 
+                     optimizer,  device, epochs, save_dir, 
+                     save_bacc, 
+                     weight_strategy='effective_number', 
+                     scheduler=None, tta_method=None, threhold='0.5'):
+    """
+    Train the classifier with validation and model saving using Focal Loss
+    
+    Args:
+        weight_strategy (str): Strategy for class weights:
+            - 'balanced': inverse frequency weighting
+            - 'equal': equal weights for all classes
+            - 'effective_number': weights based on effective number of samples
+    """
+    os.makedirs(save_dir, exist_ok=True)
+    labels = train_loader.dataset.labels_np
+    class_weights = compute_class_weights_new(labels, weight_strategy)
+    classification_loss_fn = FocalLoss(alpha=class_weights, gamma=2.0)
+
+
+    best_val_bacc = -1
+    for epoch in range(1, epochs + 1):
+        model.train()
+
+        train_preds, train_labels = [], []
+        
+        train_loss = 0
+
+        for batch_idx, (data, labels) in enumerate(train_loader):
+            data, labels = data.to(device), labels.to(device)
+            
+            optimizer.zero_grad()
+            outputs, proj_F, _ = model(data)
+
+            loss_cls = classification_loss_fn(outputs, labels)
+            
+            # print(f'Losses - Classification Stage: {loss_cls_stage.item():.6f}, Classification Apnea: {loss_cls_apnea.item():.6f}')
+            train_loss += loss_cls.item()
+            
+            loss_cls.backward()
+            optimizer.step()
+            
+            _, predicted_labels = torch.max(outputs.data, 1)
+            train_preds.extend(predicted_labels.cpu().numpy())
+            train_labels.extend(labels.cpu().numpy())
+
+        avg_train_loss = train_loss / len(train_loader)
+
+        train_bacc = balanced_accuracy_score(train_labels, train_preds)
+        # train_f1 = f1_score(train_labels, train_preds, average='weighted')
+
+        if scheduler is not None:
+            scheduler.step()
+            last_lrs = scheduler.get_last_lr()
+            # print(f"Current Learning Rate (from scheduler's get_last_lr()): {last_lrs[0]}")
+
+
+        model.eval()
+        val_preds, val_labels, val_probs = [], [], []
+        val_loss = 0    
+        with torch.no_grad():
+            for data, labels, _ in val_loader:
+                data, labels = data.to(device), labels.to(device)
+                if tta_method is not None:
+                    # B, C, T
+                    outputs1, proj_F, _ = model(data)
+                    outputs2, _, _ = model(torch.flip(data, dims=[2]))
+                    outputs3, _, _ = model(-data)
+                    
+                    if tta_method == 'avg':
+                        outputs = (outputs1 + outputs2 + outputs3) / 3
+                        _, predicted_labels = torch.max(outputs.data, 1) 
+                    if tta_method == 'avgnew':
+                        outputs4, _, _ = model(modify_magnitude_with_gaussian_noise_batch(data))
+                        outputs = (outputs1 + outputs2 + outputs3 + outputs4) / 4
+                        _, predicted_labels = torch.max(outputs.data, 1)
+                else:
+                    outputs, proj_F, _ = model(data)
+                    _, predicted_labels = torch.max(outputs.data, 1)
+
+                loss_cls = classification_loss_fn(outputs, labels)
+ 
+
+                val_loss += loss_cls.item()
+
+
+                val_preds.extend(predicted_labels.cpu().numpy())
+                val_probs.extend(F.softmax(outputs.data, dim=1).cpu().numpy())
+                val_labels.extend(labels.cpu().numpy())
+
+
+        avg_val_loss = val_loss / len(val_loader)
+
+        if threhold == 'F1':
+            val_probs_pos = np.array(val_probs)[:, 1]
+            threshold_results = find_best_threshold_F1(
+                y_true=np.array(val_labels),
+                y_prob=val_probs_pos,
+                num_thresholds=500,
+                average='weighted'
+            )
+            val_best_threshold = threshold_results['best_threshold']
+            val_bacc = threshold_results['best_bacc']
+            val_f1 = threshold_results['best_f1']
+            val_conf_mat = threshold_results['confusion_matrix']
+        elif threhold == '0.5':
+            val_best_threshold = 0.5
+            val_bacc = balanced_accuracy_score(val_labels, val_preds)
+            val_f1 = f1_score(val_labels, val_preds, average='weighted')
+            val_conf_mat = confusion_matrix(val_labels, val_preds)
+            
+
+        print(f'\nEpoch {epoch} Results:')
+        print(f'Training - Loss: {avg_train_loss*1e4:.4f}')
+        print(f'Training - Bacc : {train_bacc:.4f}')
+        print(f'Validation - Loss: {avg_val_loss*1e4:.4f}')
+        print(f'Validation - Bacc: {val_bacc:.4f}')
+
+        print('\nValidation CM:')
+        print(val_conf_mat)
+
+        if train_bacc < save_bacc: continue
+
+        if val_bacc > best_val_bacc:
+            print(f'✅ Best model found at epoch {epoch} with Threshold: {val_best_threshold:.4f}')
+            
+            best_val_bacc = val_bacc
+            best_val_f1 = val_f1
+
+            model_name = f'epoch{epoch}_{int(val_bacc*100)}_{int(val_f1*100)}.pth'
+            latest_model_path = os.path.join(save_dir, model_name)
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'val_bacc': val_bacc,
+                'val_f1': val_f1,
+            }, latest_model_path)
+
+
+
+
 
 def train_classifier_MTL(model, train_loader, val_loader, 
                      optimizer,  device, epochs, save_dir, 
@@ -1675,6 +1846,48 @@ def inference_MTL(model, data_loader, device, tta_method=None):
         all_masks = np.array(all_masks)
         return all_preds_stage, all_labels_stage, all_probs_stage, all_preds_apnea, all_labels_apnea, all_probs_apnea, all_others, all_masks
 
+
+def inference_TriClass(model, data_loader, device, tta_method=None):
+    model.eval()
+
+
+    all_labels= []
+    all_preds = []
+    all_probs = []
+    all_others = []
+    all_masks = []
+
+
+    with torch.no_grad():
+        for data, labels, others in data_loader:
+            data, labels = data.to(device), labels.to(device)
+            if tta_method is not None:
+                # B, C, T
+                outputs1, proj_F, _ = model(data)
+                outputs2, proj_F, _ = model(torch.flip(data, dims=[2]))
+                outputs3, proj_F, _ = model(-data)
+                
+                if tta_method == 'avg':
+                    outputs = (outputs1 + outputs2 + outputs3) / 3
+                    _, predicted = torch.max(outputs.data, 1)   
+                if tta_method == 'avgnew':
+                    outputs4, _, _ = model(modify_magnitude_with_gaussian_noise_batch(data))
+                    outputs = (outputs1 + outputs2 + outputs3 + outputs4) / 4
+                    _, predicted = torch.max(outputs.data, 1)
+            else:
+                outputs, proj_F, _ = model(data)
+                _, predicted = torch.max(outputs.data, 1)
+            
+            probs = F.softmax(outputs.data, dim=1)
+            all_preds.extend(predicted.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+            all_probs.extend(probs.cpu().numpy())
+            all_others.extend(others.numpy())
+        all_labels = np.array(all_labels)
+        all_preds = np.array(all_preds)
+        all_probs = np.array(all_probs) 
+        all_others = np.array(all_others)
+        return all_preds, all_labels, all_probs, all_others
 
 
 

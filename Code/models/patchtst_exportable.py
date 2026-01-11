@@ -359,13 +359,13 @@ class PatchTST_backbone_exp(nn.Module):
     def forward(self, z):                                                                   # z: [bs x nvars x seq_len]
         # z [B, C, T] -> [B, C, T//patch_len, patch_len]
         # unfold is extracting patches in last dimension using a sliding window
-        z_test = z.unfold(dimension=-1, size=self.patch_len, step=self.stride)   
-        print(z_test.shape)                                                     # z_test: [bs x nvars x patch_num x patch_len]
+        # z_test = z.unfold(dimension=-1, size=self.patch_len, step=self.stride)   
+        # print(z_test.shape)                                                     # z_test: [bs x nvars x patch_num x patch_len]
         # z = self.patch_embed(z)  
         #                                                           # z: [bs x d_model x patch_num]
         
         z = manual_unfold(z, patch_len=self.patch_len, stride=self.stride)
-        print(z.shape)      
+        # print(z.shape)      
         # print(f'shape after unfold: {z.shape}')                                       # z: [bs x nvars x patch_num x patch_len]
                      # z: [bs x nvars x patch_num x patch_len]
         z = self.backbone(z)                                                                # z: [bs x nvars x d_model x patch_num]

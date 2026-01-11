@@ -7,7 +7,7 @@ import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
-from Code.utils_dl import ApneaDataset, ApneaDataset_MTL, BalancedBatchSampler, ApneaDataset_MTL_REC
+from Code.utils_dl import ApneaDataset, ApneaDataset_MTL, BalancedBatchSampler, ApneaDataset_MTL_REC, ApneaDataset_TriClass
 from Code.utils_dsp import denoise, denoise_band, normalize, modify_magnitude_with_gaussian_noise, denoise_iter
 from statsmodels.tsa.stattools import acf
 from torch.utils.data import DataLoader
@@ -270,6 +270,53 @@ def augmentation(X, Y, Z, Events, others):
 	others = np.concatenate((others, np.array(augmented_Others)), axis=0)
 
 	return X, Y, Z, Events, others
+
+
+def augmentation_TriClass(X, Y, Z, Labels, others):
+	augmented_X, augmented_Y, augmented_Z = [], [], []
+	augmented_Labels, augmented_Others = [], []
+
+	for i in range(len(Y)):
+		cnt = 0
+
+		if Labels[i] != 0: 
+			x_aug = [-X[i], X[i, ::-1], -X[i, ::-1], modify_magnitude_with_gaussian_noise(X[i])]
+			y_aug = [-Y[i], Y[i, ::-1], -Y[i, ::-1], modify_magnitude_with_gaussian_noise(Y[i])]
+			z_aug = [-Z[i], Z[i, ::-1], -Z[i, ::-1], modify_magnitude_with_gaussian_noise(Z[i])]
+			augmented_X.extend(x_aug)
+			augmented_Y.extend(y_aug)
+			augmented_Z.extend(z_aug)
+			cnt += 4
+		else:
+			if np.random.rand() < 0.1:
+				x_aug = [-X[i], X[i, ::-1], -X[i, ::-1]]
+				y_aug = [-Y[i], Y[i, ::-1], -Y[i, ::-1]]
+				z_aug = [-Z[i], Z[i, ::-1], -Z[i, ::-1]]
+				augmented_X.extend(x_aug)
+				augmented_Y.extend(y_aug)
+				augmented_Z.extend(z_aug)
+				cnt += 3
+			if np.random.rand() < 0.1:
+				x_aug = modify_magnitude_with_gaussian_noise(X[i])
+				y_aug = modify_magnitude_with_gaussian_noise(Y[i])
+				z_aug = modify_magnitude_with_gaussian_noise(Z[i])
+				augmented_X.append(x_aug)
+				augmented_Y.append(y_aug)
+				augmented_Z.append(z_aug)
+				cnt += 1
+
+		augmented_Labels.extend([Labels[i]] * cnt)
+		augmented_Others.extend([others[i]] * cnt)
+
+	X = np.concatenate((X, np.array(augmented_X)), axis=0)
+	Y = np.concatenate((Y, np.array(augmented_Y)), axis=0)
+	Z = np.concatenate((Z, np.array(augmented_Z)), axis=0)
+	Labels = np.concatenate((Labels, np.array(augmented_Labels)), axis=0)
+	others = np.concatenate((others, np.array(augmented_Others)), axis=0)
+
+	return X, Y, Z, Labels, others
+
+
 
 def augmentation_MTL(X, Y, Z, Events, Stages, others):
 	augmented_X, augmented_Y, augmented_Z = [], [], []
@@ -555,6 +602,39 @@ def data_preprocess(data, Type, raw, sleep_index, nseg, index):
 		print(f'Events_{Type} {unique_events[i]}: ', np.sum(Events == unique_events[i]))
 	
 	return X, Y, Z, Events, others
+
+
+def data_preprocess_TriClass(data, Type):
+	print('-'*50)
+	print(f'In {Type} ...')
+
+	X, Y, Z = data[:, :6000], data[:, 6000:12000], data[:, 12000:18000]
+
+	others = data[:, -6:-2]
+	Labels = data[:, -1]
+	
+
+
+	# X, Y, Z = denoise(X), denoise(Y), denoise(Z)
+	X = denoise_iter(X)
+	Y = denoise_iter(Y)
+	Z = denoise_iter(Z)
+	print('Denoising')
+	X, Y, Z = resample_poly(X,1,10,axis=1), resample_poly(Y,1,10,axis=1), resample_poly(Z,1,10,axis=1)
+	X, Y, Z = X[:, 5:595], Y[:, 5:595], Z[:, 5:595]
+	print(f'Downsampled')
+
+	X, Y, Z = normalize(X), normalize(Y), normalize(Z)
+	print("Normalization")
+	if Type == 'train':
+		X, Y, Z, Labels, others = augmentation_TriClass(X, Y, Z, Labels, others)
+		print(f'After Augmentation, Labels_{Type}.shape: ', Labels.shape)
+
+	unique_labels = np.unique(Labels)
+	for i in range(len(unique_labels)):
+		print(f'Labels_{Type} {unique_labels[i]}: ', np.sum(Labels == unique_labels[i]))
+	
+	return X, Y, Z, Labels, others
 
 
 
@@ -933,6 +1013,42 @@ def npy2dataset_MTL(data_path, fold_idx, args):
 	val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, drop_last=True)
 
 	return train_loader, val_loader
+
+
+def npy2dataset_true_TriClass(data_path, fold_idx, args):
+	"""Shape of each batch: [batch_size, channels, seq_len]"""
+	train_data, val_data, test_data = load_train_val_test_data(data_path, fold_idx)
+
+	X_train, Y_train, _, Labels_train, others_train = data_preprocess_TriClass(train_data, 'train')
+	X_val, Y_val, _, Labels_val, others_val = data_preprocess_TriClass(val_data, 'val')
+	X_test, Y_test, _, Labels_test, others_test = data_preprocess_TriClass(test_data, 'test')
+
+	print(f'X_train: {X_train.shape}, X_val: {X_val.shape}, X_test: {X_test.shape}')
+
+	if args.XYZ == 'XY':
+		Signals_train = np.stack([X_train, Y_train], axis=-1) 
+		Signals_val = np.stack([X_val, Y_val], axis=-1)
+		Signals_test = np.stack([X_test, Y_test], axis=-1)
+	elif args.XYZ == 'X':
+		Signals_train = np.expand_dims(X_train, axis=-1)
+		Signals_val = np.expand_dims(X_val, axis=-1)
+		Signals_test = np.expand_dims(X_test, axis=-1)
+	elif args.XYZ == 'Y':
+		Signals_train = np.expand_dims(Y_train, axis=-1)
+		Signals_val = np.expand_dims(Y_val, axis=-1)
+		Signals_test = np.expand_dims(Y_test, axis=-1)
+
+
+	train_dataset = ApneaDataset_TriClass(Signals_train, Labels_train)
+
+	train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, drop_last=True)
+	val_dataset = ApneaDataset_TriClass(Signals_val, Labels_val, others_val)
+	val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, drop_last=True)
+
+	test_dataset = ApneaDataset_TriClass(Signals_test, Labels_test, others_test)
+	test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, drop_last=True)
+
+	return train_loader, val_loader, test_loader
 
 
 
