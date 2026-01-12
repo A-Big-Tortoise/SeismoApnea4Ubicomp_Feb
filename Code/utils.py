@@ -117,7 +117,6 @@ def seed_everything(seed):
 	torch.cuda.manual_seed(seed)
 	torch.cuda.manual_seed_all(seed)
 	torch.backends.cudnn.benchmark = False
-	# torch.backends.cudnn.deterministic = True
 
 
 
@@ -699,8 +698,6 @@ def data_preprocess_MTL(data, Type):
 def data_preprocess_MTL_REC(data, Type):
 	print('-'*50)
 	print(f'In {Type} ...')
-
-	data = data[:3000]
 
 	X, Y, Z = data[:, :6000], data[:, 6000:12000], data[:, 12000:18000]
 	THO, ABD = data[:, 18000: 24000], data[:, 24000: 30000]

@@ -31,13 +31,15 @@ if __name__ == "__main__":
 	step_sig_apn = 150
 	step_sig_sleep = 10
 	
-	XYZ = 'Y'
-	Experiment = 'Tri_Axis_Comp'
-	model_folder_name = f'{XYZ}_60s_F1_ws1_wa1'
+	XYZ = 'XY'
+	Experiment = 'MTL'
+	model_folder_name_stage = f'{XYZ}_60s_F1_ws1_wa0'
+	config_path_stage = f"Experiments/{Experiment}/configs/{model_folder_name_stage}.yaml"
+	fold2id, fold_to_threshold_stage, _ = load_configs(config_path_stage)
 
-	config_path = f"Experiments/{Experiment}/configs/{model_folder_name}.yaml"
-
-	fold2id, fold_to_threshold_stage, fold_to_threshold_apn = load_configs(config_path)
+	model_folder_name_apnea = f'{XYZ}_60s_F1_ws0_wa1'
+	config_path_apnea = f"Experiments/{Experiment}/configs/{model_folder_name_apnea}.yaml"
+	fold2id, _, fold_to_threshold_apn = load_configs(config_path_apnea)
 	
 	for fold_name, id_list in fold2id.items():
 		for _id in id_list:
@@ -82,19 +84,23 @@ if __name__ == "__main__":
 
 
 		# ============ Inference ============
-		model_folder = f'Experiments/{Experiment}/Models/{model_folder_name}/fold{fold_idx}/PatchTST_patchlen24_nlayer4_dmodel64_nhead4_dff256/'
-		model = load_model_MTL(model_folder, device, axis=len(XYZ))
+		model_folder_stage = f'Experiments/{Experiment}/Models/{model_folder_name_stage}/fold{fold_idx}/PatchTST_patchlen24_nlayer4_dmodel64_nhead4_dff256/'
+		model_stage = load_model_MTL(model_folder_stage, device, axis=len(XYZ))
 		
-		_, pred_res_apn = inference(X_concat, Y_concat, model, device, step_sig_apn, threshold=fold_to_threshold_apn[fold_idx], XY=XYZ)	
+		pred_res_sleep, _ = inference(X_concat, Y_concat,model_stage, device, step_sig_sleep, threshold=fold_to_threshold_stage[fold_idx], XY=XYZ)
+		pad_length_sleep = 60 // step_sig_sleep
+		pred_res_sleep = np.pad(pred_res_sleep, (pad_length_sleep, 1), mode='constant', constant_values=1)
+		pred_time_sleep = np.arange(len(pred_res_sleep)) * step_sig_sleep / 10
+
+
+		model_folder_apnea = f'Experiments/{Experiment}/Models/{model_folder_name_apnea}/fold{fold_idx}/PatchTST_patchlen24_nlayer4_dmodel64_nhead4_dff256/'
+		model_apnea = load_model_MTL(model_folder_apnea, device, axis=len(XYZ))
+		_, pred_res_apn = inference(X_concat, Y_concat, model_apnea, device, step_sig_apn, threshold=fold_to_threshold_apn[fold_idx], XY=XYZ)	
 		pad_length_apn = 600 // step_sig_apn
 		pred_res_apn = np.pad(pred_res_apn, (pad_length_apn, 0), mode='constant', constant_values=0)
 		pred_time_apn = np.arange(len(pred_res_apn)) * step_sig_apn / 10  
 
 
-		pred_res_sleep, _ = inference(X_concat, Y_concat,model, device, step_sig_sleep, threshold=fold_to_threshold_stage[fold_idx], XY=XYZ)
-		pad_length_sleep = 60 // step_sig_sleep
-		pred_res_sleep = np.pad(pred_res_sleep, (pad_length_sleep, 1), mode='constant', constant_values=1)
-		pred_time_sleep = np.arange(len(pred_res_sleep)) * step_sig_sleep / 10
 
 		wake_masks = get_wake_masks_pred(pred_res_sleep, step_sig_apn // 10)	
 		if ID_npy == 29:
@@ -133,12 +139,11 @@ if __name__ == "__main__":
 		TST_labels.append(sleep_time_excel)
 		TST_preds.append(sleep_time_pred)
 		
-
 		AHI_labels.append(AHI_label)
 		AHI_preds.append(AHI_preds_processed_label)
 		
-	path = f'Experiments/Tri_Axis_Comp/Models/{model_folder_name}/AHI_{step_sig_apn//10}s_larger2_change106108134_change29_no153119241149932_with108'
-	sleep_path = f'Experiments/Tri_Axis_Comp/Models/{model_folder_name}/TST_{step_sig_sleep//10}s_larger2_change106108134_change29_no153119241149932_with108'
+	path = f'Experiments/{Experiment}/Models/AHI_{step_sig_apn//10}s_larger2_change106108134_change29_no153119241149932_with108'
+	sleep_path = f'Experiments/{Experiment}/Models/TST_{step_sig_sleep//10}s_larger2_change106108134_change29_no153119241149932_with108'
 
 
 	AHI_labels, AHI_preds = np.array(AHI_labels), np.array(AHI_preds)	

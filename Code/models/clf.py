@@ -465,7 +465,7 @@ class ApneaClassifier_PatchTST_MTL(nn.Module):
     def __init__(self, input_size, seq_len, patch_len, stride, n_layers, d_model,
                   n_heads, d_ff, num_classes, axis, dropout, mask_ratio):
         super(ApneaClassifier_PatchTST_MTL, self).__init__()
-        self.encoder = PatchTST_backbone_exp(c_in = input_size, 
+        self.encoder = PatchTST_backbone(c_in = input_size, 
                                         context_window = seq_len,
                                         patch_len = patch_len,
                                         stride = stride,
@@ -558,7 +558,7 @@ class ApneaClassifier_PatchTST_MTL_REC(nn.Module):
     def __init__(self, input_size, seq_len, patch_len, stride, n_layers, d_model,
                   n_heads, d_ff, num_classes, axis, dropout, mask_ratio):
         super(ApneaClassifier_PatchTST_MTL_REC, self).__init__()
-        self.encoder = PatchTST_backbone_exp(c_in = input_size, 
+        self.encoder = PatchTST_backbone(c_in = input_size, 
                                         context_window = seq_len,
                                         patch_len = patch_len,
                                         stride = stride,

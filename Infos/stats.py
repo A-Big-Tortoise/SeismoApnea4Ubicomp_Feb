@@ -6,13 +6,13 @@ from collections import Counter
 
 
 
-def ratio_check(file, threshold=0.75):
-	try: data_check_quality = np.load('/home/jiayu/SleepApnea4Ubicomp/Data/data_p144_rdi/' + file)
-	except: data_check_quality = np.load('/home/jiayu/SleepApnea4Ubicomp/Data/data_p137_rdi_useless/' + file)
+# def ratio_check(file, threshold=0.75):
+# 	try: data_check_quality = np.load('/home/jiayu/SleepApnea4Ubicomp/Data/data_p144_rdi/' + file)
+# 	except: data_check_quality = np.load('/home/jiayu/SleepApnea4Ubicomp/Data/data_p137_rdi_useless/' + file)
 	
-	ratio = data_check_quality.shape[0] / data.shape[0]
-	if ratio < threshold: return False
-	return True
+# 	ratio = data_check_quality.shape[0] / data.shape[0]
+# 	if ratio < threshold: return False
+# 	return True
 
 
 
@@ -68,7 +68,8 @@ if __name__ == "__main__":
 	# 	if ID_npy == 108: AHI_label = 9.6
 
 	# 	useful_ids.append(ID_npy)
-	useful_ids = [136.0, 39.0, 106.0, 155.0, 32.0, 156.0, 99.0, 31.0, 157.0, 22.0, 91.0, 83.0, 123.0, 148.0, 120.0, 154.0, 118.0, 17.0, 5.0, 98.0, 27.0, 30.0, 10.0, 101.0, 151.0, 9.0, 7.0, 86.0, 84.0, 53.0, 144.0, 110.0, 141.0, 146.0, 2.0, 107.0, 19.0, 55.0, 1.0, 138.0, 40.0, 14.0, 12.0, 34.0, 137.0, 29.0, 41.0, 15.0, 3.0, 23.0, 18.0, 92.0, 143.0, 102.0, 117.0, 57.0, 48.0, 44.0, 152.0, 4.0, 150.0, 51.0, 93.0, 127.0, 52.0, 8.0, 116.0, 42.0, 104.0, 108.0, 97.0, 33.0]
+	# useful_ids = [136.0, 39.0, 106.0, 155.0, 32.0, 156.0, 99.0, 31.0, 157.0, 22.0, 91.0, 83.0, 123.0, 148.0, 120.0, 154.0, 118.0, 17.0, 5.0, 98.0, 27.0, 30.0, 10.0, 101.0, 151.0, 9.0, 7.0, 86.0, 84.0, 53.0, 144.0, 110.0, 141.0, 146.0, 2.0, 107.0, 19.0, 55.0, 1.0, 138.0, 40.0, 14.0, 12.0, 34.0, 137.0, 29.0, 41.0, 15.0, 3.0, 23.0, 18.0, 92.0, 143.0, 102.0, 117.0, 57.0, 48.0, 44.0, 152.0, 4.0, 150.0, 51.0, 93.0, 127.0, 52.0, 8.0, 116.0, 42.0, 104.0, 108.0, 97.0, 33.0]
+	useful_ids = [136.0, 39.0, 106.0, 155.0, 156.0, 31.0, 157.0, 22.0, 91.0, 83.0, 123.0, 148.0, 120.0, 154.0, 118.0, 17.0, 5.0, 98.0, 27.0, 30.0, 10.0, 101.0, 151.0, 9.0, 7.0, 86.0, 84.0, 53.0, 144.0, 110.0, 141.0, 146.0, 2.0, 107.0, 19.0, 55.0, 1.0, 138.0, 40.0, 14.0, 12.0, 34.0, 137.0, 29.0, 41.0, 15.0, 3.0, 23.0, 18.0, 92.0, 143.0, 102.0, 117.0, 57.0, 48.0, 44.0, 152.0, 4.0, 150.0, 51.0, 93.0, 127.0, 52.0, 8.0, 116.0, 42.0, 104.0, 108.0, 97.0, 33.0]
 	print('Useful IDs:', useful_ids)
 	print('Total Useful IDs:', len(useful_ids))
 

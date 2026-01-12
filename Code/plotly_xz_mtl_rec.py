@@ -470,18 +470,6 @@ def get_wake_masks_29(SleepStage_concat, step_sleep):
 	return wake_masks
 
 
-def process_allnight_data(data, denoising=False):
-	step_seconds = duration - overlap
-	sampling_rate = data.shape[1] / duration
-	step_size = int(step_seconds * sampling_rate)
-	concatenated = concatenate_segments(data, step_size)
-	if denoising:
-		concatenated = denoise(concatenated)
-	
-	concatenate = resample_poly(concatenated, 1, 10)
-	concatenate = normalize_1d(concatenate)
-	return concatenate, np.arange(len(concatenate)) / (sampling_rate/10)
-
 
 def count_continuous_ones(signal):
 	signal = np.array(signal)
@@ -554,17 +542,7 @@ def load_configs(config_path):
 	return fold2id, fold2threshold_stage, fold2threshold_apnea
 
 
-def ratio_check(file, threshold=0.75):
-	try: data_check_quality = np.load('/home/jiayu/SleepApnea4Ubicomp/Data/data_p144_rdi/' + file)
-	except: data_check_quality = np.load('/home/jiayu/SleepApnea4Ubicomp/Data/data_p137_rdi_useless/' + file)
-	
-	ratio = data_check_quality.shape[0] / data.shape[0]
-	print(f'ratio: {data_check_quality.shape[0] / data.shape[0]:.3f}')
-	if ratio < 0.75: return False
-	return True
-
-
-def load_model_MTL_REC(fold_idx, model_folder_name, device):
+def load_model_MTL_REC(model_folder, device):
 	patch_len = 24
 	n_layers = 4
 	d_model = 64
@@ -584,7 +562,6 @@ def load_model_MTL_REC(fold_idx, model_folder_name, device):
 		mask_ratio=0.5
 		).to(device)
 	
-	model_folder = f'Models/{model_folder_name}/fold{fold_idx}/PatchTST_patchlen{patch_len}_nlayer{n_layers}_dmodel{d_model}_nhead{n_heads}_dff{d_ff}/'
 
 	sorted_files = sorted(os.listdir(model_folder), key=lambda x: int(x.split('_')[0][5:]), reverse=False)
 	# print(f'sorted_files: {sorted(os.listdir(model_folder))}')
