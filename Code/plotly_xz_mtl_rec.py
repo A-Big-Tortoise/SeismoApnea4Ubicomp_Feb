@@ -8,10 +8,9 @@ sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 import subprocess
 from Code.utils_dsp import denoise, normalize_1d
 from Code.models.clf import ApneaClassifier_PatchTST_MTL_REC
-from utils import choose_gpu_by_model_process_count
-
-from Code.utils import calculate_icc_standard, ahi_to_severity
+from Code.utils import choose_gpu_by_model_process_count, calculate_icc_standard, ahi_to_severity
 from scipy.signal import resample_poly 
+from Code.plotly_xz_mtl import process_allnight_data, ratio_check_lst
 import torch
 import pandas as pd
 from sklearn.metrics import confusion_matrix
@@ -22,10 +21,6 @@ from sklearn.metrics import (
 	balanced_accuracy_score,
 	f1_score
 )
-
-from scipy.ndimage import median_filter
-
-
 
 def plot_person_level_results_sleep(y_true_list, y_pred_list, ahi_label_list,
 							  fig_path):
@@ -500,26 +495,80 @@ def count_continuous_ones(signal):
 	return segments, len(segments)
 
 
+# def compute_segmented_mae(AHI_labels, AHI_preds):
+# 	AHI_labels = np.array(AHI_labels)
+# 	AHI_preds = np.array(AHI_preds)
+
+# 	segments = np.array([ahi_to_severity(x) for x in AHI_labels])
+
+# 	maes = {}
+# 	stds = {}
+# 	for s in range(4):
+# 		idx = (segments == s)
+# 		if np.sum(idx) == 0:
+# 			maes[s] = None
+# 			stds[s] = None
+# 		else:
+# 			maes[s] = np.mean(np.abs(AHI_labels[idx] - AHI_preds[idx]))
+# 			stds[s] = np.std(np.abs(AHI_labels[idx] - AHI_preds[idx]))
+
+# 	return {
+# 		f"Normal (<5): {maes[0]:.2f} \pm {stds[0]:.2f}",
+# 		f"Mild (5–15): {maes[1]:.2f} \pm {stds[1]:.2f}",
+# 		f"Moderate (15–30): {maes[2]:.2f} \pm {stds[2]:.2f}",
+# 		f"Severe (≥30): {maes[3]:.2f} \pm {stds[3]:.2f}",
+# 	}
+
+
+
 def compute_segmented_mae(AHI_labels, AHI_preds):
-	AHI_labels = np.array(AHI_labels)
-	AHI_preds = np.array(AHI_preds)
+	AHI_labels = np.asarray(AHI_labels)
+	AHI_preds = np.asarray(AHI_preds)
 
 	segments = np.array([ahi_to_severity(x) for x in AHI_labels])
 
-	maes = {}
+	results = ''
+
+	severity_names = {
+		0: "Normal (<5)",
+		1: "Mild (5–15)",
+		2: "Moderate (15–30)",
+		3: "Severe (≥30)",
+	}
+
+	idx_sum = []
 	for s in range(4):
 		idx = (segments == s)
-		if np.sum(idx) == 0:
-			maes[s] = None
-		else:
-			maes[s] = np.mean(np.abs(AHI_labels[idx] - AHI_preds[idx]))
+		idx_sum.append(np.sum(idx))
+		key = severity_names[s]
 
-	return {
-		"Normal (<5)": maes[0],
-		"Mild (5–15)": maes[1],
-		"Moderate (15–30)": maes[2],
-		"Severe (≥30)": maes[3],
-	}
+		if np.sum(idx) == 0:
+			results += f"{key}: N/A\n"
+		else:
+			errors = np.abs(AHI_labels[idx] - AHI_preds[idx])
+			mae = np.mean(errors)
+			std = np.std(errors)
+			# results[key] = f"{mae:.2f} ± {std:.2f}"
+			results += f"{key}: {mae:.2f} $\pm$ {std:.2f}\n"
+	
+	results += f"\nOverall MAE: {np.mean(np.abs(AHI_labels - AHI_preds)):.2f} $\pm$ {np.std(np.abs(AHI_labels - AHI_preds)):.2f}\n"
+	
+	results += f"Sample counts per severity: [{idx_sum[0]}/{idx_sum[1]}/{idx_sum[2]}/{idx_sum[3]}]\n"
+	return results
+
+
+
+
+
+def compute_tst_mae(TST_labels, TST_preds, legend):
+	TST_labels = np.array(TST_labels)
+	TST_preds = np.array(TST_preds)
+	mae = np.mean(np.abs(TST_labels - TST_preds))
+	std = np.std(np.abs(TST_labels - TST_preds))
+
+	return f"TST: {mae:.2f} $\pm$ {std:.2f} \n"
+
+
 
 
 def remove_short_ones(x, min_len=2):
@@ -612,7 +661,7 @@ if __name__ == "__main__":
 		if ID_npy not in id2fold: continue
 		# if ID_npy in [50, 25, 108, 134, 120, 153, 119]: continue
 		if ID_npy in [24, 50, 25, 134, 153, 119, 114]: continue
-		if not ratio_check(file): continue
+		if not ratio_check_lst(file): continue
 		sleep_time_excel = df.loc[df['ID'] == ID_npy, 'Duration(h)'].values[0]  * df.loc[df['ID'] == ID_npy, 'SEfficiency'].values[0] * 0.01
 		if sleep_time_excel <= 2:
 			print(f'Skipping patient {ID_npy} due to short sleep time: {sleep_time_excel:.2f} h\n')
@@ -697,43 +746,6 @@ if __name__ == "__main__":
 		
 		if len(AHI_labels) > 20: break
 
-		# fig, axes = plt.subplots(3, 1, figsize=(16, 9))
-		# plt.title(f'Patient ID: {ID_npy}')
-		# SleepStage_concat[(SleepStage_concat < 4) & (SleepStage_concat >= 0)] = 0
-		# SleepStage_concat[SleepStage_concat == -1] = 1
-		# SleepStage_concat[SleepStage_concat >= 4] = 1		
-		
-		# axes[0].plot(time_sleep, SleepStage_concat, label='Sleep Stage')
-		# axes[0].set_title(f'Sleep Stage Label, {sleep_time_excel:.2f} h')
-		# axes[1].plot(pred_time_sleep, pred_res_sleep, label='Predicted Sleep Time')
-		# axes[1].set_title(f'Predicted Sleep Time, {sleep_time_pred:.2f} h')
-		# axes[2].plot(pred_time_sleep, pred_res_sleep_processed, label='Processed Predicted Sleep Time')
-		# axes[2].set_title(f'Processed Sleep Time, {sleep_time_pred_processed:.2f} h')
-
-		# plt.tight_layout()
-		# plt.savefig(f'/home/jiayu/SleepApnea4Ubicomp/Models/binary_Sleep_Wake_XY_p109_Supcon_F1_balanced_mask0.5_AHI_45s_sw_AVG_true/figs/{order}order/{file[:-4]}.png')
-		# plt.close()
-
-		# if ID_npy in [114] or (AHI_label >15 and AHI_label <= 30):
-		# if np.abs(AHI_label - AHI_preds_processed_label) >= 8:
-		# 	signals = [
-		# 		# (time_xyz, X_concat, 'X-axis', '#1f77b4'),
-		# 		# (time_xyz, Y_concat, 'Y-axis', '#ff7f0e'),
-		# 		# (time_tho_abd, THO_concat, 'Thoracic', '#d62728'),
-		# 		# (time_tho_abd, ABD_concat, 'Abdominal', '#9467bd'),
-		# 		(time_sleep, SleepStage_concat, 'Sleep Stage', '#8c564b'),
-		# 		(time_event, Event_concat, 'Events', '#e377c2'),
-		# 		(pred_time_apn, pred_res_processed, 'Processed Predicted Apnea', '#bcbd22'),
-		# 		(pred_time_sleep, pred_res_sleep, 'Predicted Sleep', '#7f7f7f')
-		# 	]
-
-
-		# 	output_file = plot_all_concatenated_signals(signals, 
-		# 											n_true_apnea_events, n_apnea_events, 
-		# 											AHI_label, AHI_preds_processed_label,
-		# 												file[:-4])
-		# 	print('---------------------------------------')
-			
 
 	path = f'Models/{model_folder_name}/AHI_{step_sig_apn//10}s_larger2_change106108134_change29_no15311924114_with108_newplots'
 	sleep_path = f'Models/{model_folder_name}/TST_{step_sig_sleep//10}s_larger2_change106108134_change29_no15311924114_with108_newplots'

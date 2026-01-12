@@ -5,12 +5,12 @@ import pandas as pd
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
-from Code.utils import choose_gpu_by_model_process_count, calculate_icc_standard, ahi_to_severity, calculate_cm
+from Code.utils import choose_gpu_by_model_process_count, calculate_icc_standard, ahi_to_severity
 from Code.plotly_xz_mtl_rec import plot_person_level_results_sleep \
 	 , plot_person_level_results, concatenate_segments, inference_REC \
 	 , get_wake_masks_pred, get_wake_masks_29 \
 	 , count_continuous_ones, compute_segmented_mae \
-     , load_configs, load_model_MTL_REC, compute_tst_mae
+     , load_configs, load_model_MTL_REC
 from Code.plotly_xz_mtl import ratio_check_lst, process_allnight_data
 
 
@@ -39,19 +39,11 @@ if __name__ == "__main__":
 			id2fold[_id] = fold_name
 
 
-
-
-
-
-	Sexs = {'M', 'F'}
-	Ages = {'<40', '40-60', '>60'}
-	BMIs = {'Underweight', 'Normal', 'Overweight', 'Obese'}
+	Rooms = {'1', '2', '3', '4'}
+	Sizes = {'Queen', 'Full'}
 	
-	Demoe_Name = 'Sex'
-	for demotype in Sexs:
-		
-	
-
+	Demoe_Name = 'Size'
+	for demotype in Sizes:
 		TST_labels, TST_preds = [], []
 		AHI_labels, AHI_preds = [], []
 		for file in sorted(os.listdir(data_folder)):
@@ -70,27 +62,17 @@ if __name__ == "__main__":
 				continue
 
 			# Demographic filtering
-			if demotype in Sexs:
-				if df.loc[df['ID'] == ID_npy, 'Sex'].values[0] != demotype:
-					continue
-			elif demotype in Ages:
-				age = df.loc[df['ID'] == ID_npy, 'Age'].values[0]
-				if demotype == '<40' and age >=40:
-					continue
-				elif demotype == '40-60' and (age <40 or age >60):
-					continue
-				elif demotype == '>60' and age <=60:
-					continue
-			elif demotype in BMIs:
-				bmi = df.loc[df['ID'] == ID_npy, 'BMI'].values[0]
-				if demotype == 'Underweight' and bmi >=18.5:
-					continue
-				elif demotype == 'Normal' and (bmi <18.5 or bmi >=24):
-					continue
-				elif demotype == 'Overweight' and (bmi <24 or bmi >=27):
-					continue
-				elif demotype == 'Obese' and bmi <27:
-					continue
+
+			if demotype in Rooms:
+				room = df.loc[df['ID'] == ID_npy, 'Room'].values[0]
+				if demotype == '1' and room != 1: continue
+				if demotype == '2' and room != 2: continue
+				if demotype == '3' and room != 3: continue
+				if demotype == '4' and room != 4: continue
+			elif demotype in Sizes:
+				room = df.loc[df['ID'] == ID_npy, 'Room'].values[0]
+				if demotype == 'Queen' and room == 4: continue
+				if demotype == 'Full' and room != 4: continue
 
 			# ============ Data Loading and Processing ============
 			fold_idx = id2fold.get(ID_npy)
@@ -168,47 +150,16 @@ if __name__ == "__main__":
 			AHI_labels.append(AHI_label)
 			AHI_preds.append(AHI_preds_processed_label)
 			
-		log_path = f'Experiments/{Experiment}/Demographics_{Demoe_Name}/logs.txt'
-		if not os.path.exists(os.path.dirname(log_path)):
-			os.makedirs(os.path.dirname(log_path))
-
-		path = f'Experiments/{Experiment}/Demographics_{Demoe_Name}/Seismo_AHI_{demotype}_{step_sig_apn//10}s_larger2_change106108134_change29_no153119241149932_with108'
-		sleep_path = f'Experiments/{Experiment}/Demographics_{Demoe_Name}/Seismo_TST_{demotype}_{step_sig_sleep//10}s_larger2_change106108134_change29_no153119241149932_with108'
 
 
-		lines = []
-		lines.append(f'{demotype}, #: {len(AHI_labels)}\n')
-
-		result_tst = compute_tst_mae(TST_labels, TST_preds, demotype)
-		print(result_tst)
-		lines.append(result_tst)
+		path = f'Experiments/{Experiment}/Rooms_{Demoe_Name}/Seismo_AHI_{demotype}_{step_sig_apn//10}s_larger2_change106108134_change29_no153119241149932_with108'
+		sleep_path = f'Experiments/{Experiment}/Rooms_{Demoe_Name}/Seismo_TST_{demotype}_{step_sig_sleep//10}s_larger2_change106108134_change29_no153119241149932_with108'
 
 
 
 		AHI_labels, AHI_preds = np.array(AHI_labels), np.array(AHI_preds)	
-		result_mae = compute_segmented_mae(AHI_labels, AHI_preds)
-		print(result_mae) 
-		lines.append(result_mae)
-
-
-		icc = calculate_icc_standard(AHI_labels, AHI_preds)
-		result_icc = f'ICC: {icc:.3f}\n'
-		print(result_icc)
-		lines.append(result_icc)
-
-		result_cm = calculate_cm(AHI_labels, AHI_preds, demotype)
-		print(result_cm)
-		lines.append(result_cm)
-
-
-		lines.append('\n')
-		lines.append('============================\n')
-
-
-		with open(log_path, "a", encoding="utf-8") as f:
-			for line in lines:
-				f.write(line + "\n")
-		
+		result = compute_segmented_mae(AHI_labels, AHI_preds)
+		print(result) 
 		
 		plot_person_level_results(
 			y_true_list=AHI_labels,

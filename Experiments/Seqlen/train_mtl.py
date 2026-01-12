@@ -4,7 +4,7 @@ import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
-from Code.utils import seed_everything, npy2dataset_true_MTL, choose_gpu_by_model_process_count
+from Code.utils import seed_everything, npy2dataset_true_MTL_Seqlen, choose_gpu_by_model_process_count
 from Code.utils_dl import train_classifier_MTL
 from Code.models.clf import ApneaClassifier_PatchTST_MTL
 from Code.inference_mtl import load_checkpoint, inference_MTL, threshold_adjustment
@@ -15,9 +15,10 @@ import pandas as pd
 
 
 if __name__ == "__main__":
+	duration = 90
 	parser = argparse.ArgumentParser(description='Apnea Detection - BSG')
 	parser.add_argument('--seed', type=int, default=42)
-	parser.add_argument('--seq_len', type=int, default=590)
+	parser.add_argument('--seq_len', type=int, default=duration * 10 - 10)
 	parser.add_argument('--batch_size', type=int, default=256)
 	parser.add_argument('--epochs', type=int, default=75)
 	parser.add_argument('--lr', type=float, default=2e-4)
@@ -38,18 +39,19 @@ if __name__ == "__main__":
 
 	Model = 'PatchTST'
 	Type = 'MTL'
-	Experiment = 'Transferability'
+	Experiment = 'Seqlen'
+	
 
 	torch.cuda.empty_cache()
 	cuda = choose_gpu_by_model_process_count()
 	device = torch.device(f"cuda:{cuda}" if torch.cuda.is_available() else "cpu")
-	model_save_folder = f'{args.XYZ}_60s_{args.threhold}_ws{args.lambda_s}_wa{args.lambda_a}_room'
+	model_save_folder = f'{args.XYZ}_{duration}s_{args.threhold}_ws{args.lambda_s}_wa{args.lambda_a}'
 	fold_id_threshold_stage = {}
 	fold_id_threshold_apnea = {}
 	fold_id_mapping = {}
 
 
-	for fold_idx in range(4, 5):
+	for fold_idx in range(1, 5):
 		model_save_fold_name = f'Experiments/{Experiment}/Models/{model_save_folder}/fold{fold_idx}/'
 		if Model == 'PatchTST':
 			patch_len = 24
@@ -74,8 +76,8 @@ if __name__ == "__main__":
 		
 		optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 		scheduler = StepLR(optimizer, step_size=30, gamma=0.9)
-		data_path = f'Data/fold_data_p109_{Type}_60s_bedroom/'
-		train_loader, val_loader, test_loader = npy2dataset_true_MTL(data_path, fold_idx, args)
+		data_path = f'Data/fold_data_p109_{Type}_{duration}s/'
+		train_loader, val_loader, test_loader = npy2dataset_true_MTL_Seqlen(data_path, fold_idx, duration, args)
 
 
 		train_classifier_MTL(

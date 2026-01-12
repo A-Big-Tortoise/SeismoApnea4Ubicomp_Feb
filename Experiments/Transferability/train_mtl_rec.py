@@ -17,7 +17,7 @@ if __name__ == "__main__":
 	parser.add_argument('--seed', type=int, default=42)
 	parser.add_argument('--seq_len', type=int, default=590)
 	parser.add_argument('--batch_size', type=int, default=256)
-	parser.add_argument('--epochs', type=int, default=75)
+	parser.add_argument('--epochs', type=int, default=20)
 	parser.add_argument('--lr', type=float, default=2e-4)
 	parser.add_argument('--dropout', type=float, default=0.2) 
 	parser.add_argument('--XYZ', type=str, default='XY')
@@ -45,7 +45,7 @@ if __name__ == "__main__":
 	fold_id_threshold_apnea = {}
 	fold_id_mapping = {}
 
-	for fold_idx in range(1, 5):
+	for fold_idx in range(2, 5):
 		model_save_fold_name = f'Experiments/{Experiment}/Models/{model_save_folder}/fold{fold_idx}/'
 
 		if Model == 'PatchTST':
@@ -105,7 +105,7 @@ if __name__ == "__main__":
 		checkpoint = load_checkpoint(model_save_dir)
 		model.load_state_dict(checkpoint['model_state_dict'])
 
-		preds_stage, labels_stage, probs_stage, preds_apnea, labels_apnea, probs_apnea, others, stage_apnea_mask = inference_MTL(model, test_loader, device, tta_method=args.tta_method)
+		preds_stage, labels_stage, probs_stage, preds_apnea, labels_apnea, probs_apnea, others, stage_apnea_mask = inference_MTL_REC(model, test_loader, device, tta_method=args.tta_method)
 		best_threshold_stage = threshold_adjustment(np.array(probs_stage)[:, 1], labels_stage, 'Stage')
 		best_threshold_apnea = threshold_adjustment(np.array(probs_apnea)[:, 1], labels_apnea, 'Apnea')
 

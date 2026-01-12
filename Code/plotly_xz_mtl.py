@@ -429,26 +429,26 @@ def count_continuous_ones(signal):
 	return segments, len(segments)
 
 
-def compute_segmented_mae(AHI_labels, AHI_preds):
-	AHI_labels = np.array(AHI_labels)
-	AHI_preds = np.array(AHI_preds)
+# def compute_segmented_mae(AHI_labels, AHI_preds):
+# 	AHI_labels = np.array(AHI_labels)
+# 	AHI_preds = np.array(AHI_preds)
 
-	segments = np.array([ahi_to_severity(x) for x in AHI_labels])
+# 	segments = np.array([ahi_to_severity(x) for x in AHI_labels])
 
-	maes = {}
-	for s in range(4):
-		idx = (segments == s)
-		if np.sum(idx) == 0:
-			maes[s] = None
-		else:
-			maes[s] = np.mean(np.abs(AHI_labels[idx] - AHI_preds[idx]))
+# 	maes = {}
+# 	for s in range(4):
+# 		idx = (segments == s)
+# 		if np.sum(idx) == 0:
+# 			maes[s] = None
+# 		else:
+# 			maes[s] = np.mean(np.abs(AHI_labels[idx] - AHI_preds[idx]))
 
-	return {
-		"Normal (<5)": maes[0],
-		"Mild (5–15)": maes[1],
-		"Moderate (15–30)": maes[2],
-		"Severe (≥30)": maes[3],
-	}
+# 	return {
+# 		"Normal (<5)": maes[0],
+# 		"Mild (5–15)": maes[1],
+# 		"Moderate (15–30)": maes[2],
+# 		"Severe (≥30)": maes[3],
+# 	}
 
 
 def remove_short_ones(x, min_len=2):

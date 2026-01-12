@@ -1,0 +1,72 @@
+Underweight, #: 7
+
+TST: 0.87 $\pm$ 0.65 
+
+Normal (<5): 2.89 $\pm$ 0.86
+Mild (5–15): 4.94 $\pm$ 3.37
+Moderate (15–30): N/A
+Severe (≥30): N/A
+
+Overall MAE: 3.76 $\pm$ 2.51
+
+ICC: 0.236
+
+Underweight, BACC, F1: 87.50\%, 85.71\%
+
+
+============================
+
+Obese, #: 52
+
+TST: 0.77 $\pm$ 0.53 
+
+Normal (<5): 3.77 $\pm$ 2.79
+Mild (5–15): 5.20 $\pm$ 3.64
+Moderate (15–30): 6.66 $\pm$ 5.03
+Severe (≥30): 9.11 $\pm$ 9.31
+
+Overall MAE: 5.41 $\pm$ 5.03
+
+ICC: 0.883
+
+Obese, BACC, F1: 67.47\%, 69.04\%
+
+
+============================
+
+Normal, #: 3
+
+TST: 0.86 $\pm$ 0.48 
+
+Normal (<5): 1.17 $\pm$ 0.00
+Mild (5–15): 1.72 $\pm$ 0.00
+Moderate (15–30): 5.63 $\pm$ 0.00
+Severe (≥30): N/A
+
+Overall MAE: 2.84 $\pm$ 1.99
+
+ICC: 0.925
+
+Normal, BACC, F1: 100.00\%, 100.00\%
+
+
+============================
+
+Overweight, #: 8
+
+TST: 1.14 $\pm$ 0.38 
+
+Normal (<5): 4.73 $\pm$ 1.76
+Mild (5–15): 3.35 $\pm$ 3.16
+Moderate (15–30): N/A
+Severe (≥30): N/A
+
+Overall MAE: 4.22 $\pm$ 2.47
+
+ICC: 0.157
+
+Overweight, BACC, F1: 70.00\%, 61.90\%
+
+
+============================
+

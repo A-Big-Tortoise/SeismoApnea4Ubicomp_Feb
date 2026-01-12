@@ -3,7 +3,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 import numpy as np
-from sklearn.model_selection import KFold
 import pandas as pd
 from Code.utils import read_excel, time2timestamp
 
@@ -108,24 +107,21 @@ id2fold = {4: '1', 9: '1', 23: '1', 26: '1', 30: '1', 35: '1', 39: '1', 48: '1',
               2: '4', 3: '4', 5: '4, ',7: '4',8: '4',14: '4',17: '4',19: '4',24: '4',27: '4',40: '4',46: '4',55: '4',57: '4',69: '4',81: '4',83: '4',86:'4',95:'4' ,117:'4' ,120:'4' ,122:'4' ,134:'4' ,137:'4' ,146:'4' ,148:'4' ,152:'4'}
 
 def analyze_and_save_fold_distributions():
-    # dataset [x, y, z, tho, abd, Body, events, mac, time, ID, Room]
-
-
     label_func_map = {
     'binary_Nor_HypApn': get_label_binary_Nor_HypApn,
     'binary_Sleep_Wake': get_label_binary_Sleep_Wake,
     }
     
     TIME_INDEX = -3
-    data_length = 60
+    data_length = 90
 
-    data_dir = f'/home/jiayu/SleepApnea4Ubicomp/Data/data_p144_rdi_45s/'
+    data_dir = f'Data/data_{data_length}s_30s_rdi/'
     infos = read_excel()
 
     patient_files = [f for f in os.listdir(data_dir) if f.endswith('.npy')]
     # patient_indices = np.arange(len(patient_files))
 
-    save_dir = f'Data/fold_data_p{109}_MTL_45s_againtest2/'
+    save_dir = f'Data/fold_data_p{109}_MTL_{data_length}s/'
     if not os.path.exists(save_dir):
         os.makedirs(save_dir, exist_ok=True)
 
@@ -141,8 +137,12 @@ def analyze_and_save_fold_distributions():
         for patient_file in patient_files:
             print(f'\nLoading {patient_file}...')
             patient_data = np.load(os.path.join(data_dir, patient_file))
+            if len(patient_data) == 0: 
+                print(f'Skipping empty data for {patient_file}.')
+                continue
             patient_id = np.unique(patient_data[:, -2])[0]
             print(f'Patient ID: {patient_id}')
+
             if id2fold.get(int(patient_id)) != str(fold):
                 print(f'Skipping patient {patient_id} for fold {fold}. Assigned to fold {id2fold.get(int(patient_id))}.')
                 continue
@@ -160,7 +160,8 @@ def analyze_and_save_fold_distributions():
             
         #     # Split
             events_windows = patient_data[:, -2*data_length*10-4:-data_length*10-4]
-            stages_windows = patient_data[:, 30060: 30120]
+            # stages_windows = patient_data[:, 30060: 30120]
+            stages_windows = patient_data[:, -3*data_length*10-4:-2*data_length*10-4]
 
 
             print(f'index of events in data: {patient_data.shape[1]-data_length*10-4} to {patient_data.shape[1]-4}')

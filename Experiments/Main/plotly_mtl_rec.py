@@ -6,7 +6,7 @@ sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 from Code.utils_dsp import denoise, normalize_1d
 from Code.models.clf import ApneaClassifier_PatchTST_MTL_REC
-from Code.utils import choose_gpu_by_model_process_count, calculate_icc_standard, ahi_to_severity
+from Code.utils import choose_gpu_by_model_process_count, calculate_icc_standard, ahi_to_severity, calculate_cm
 from scipy.signal import resample_poly 
 import torch
 import pandas as pd
@@ -15,7 +15,7 @@ from Code.plotly_xz_mtl_rec import plot_person_level_results_sleep \
 	 , plot_person_level_results, concatenate_segments, inference_REC \
 	 , get_wake_masks_pred, get_wake_masks_29 \
 	 , count_continuous_ones, compute_segmented_mae \
-     , load_configs, load_model_MTL_REC
+     , load_configs, load_model_MTL_REC, compute_tst_mae
 from Code.plotly_xz_mtl import ratio_check_lst, process_allnight_data
 
 
@@ -137,6 +137,9 @@ if __name__ == "__main__":
 		AHI_labels.append(AHI_label)
 		AHI_preds.append(AHI_preds_processed_label)
 		
+	log_path = f'Experiments/{Experiment}/Models/{model_folder_name}/logs.txt'
+	if not os.path.exists(os.path.dirname(log_path)):
+		os.makedirs(os.path.dirname(log_path))
 
 
 	path = f'Experiments/{Experiment}/Models/{model_folder_name}/Seismo_AHI_{step_sig_apn//10}s_larger2_change106108134_change29_no153119241149932_with108'
@@ -147,6 +150,41 @@ if __name__ == "__main__":
 	AHI_labels, AHI_preds = np.array(AHI_labels), np.array(AHI_preds)	
 	result = compute_segmented_mae(AHI_labels, AHI_preds)
 	print(result) 
+
+
+	lines = []
+	lines.append(f'All #: {len(AHI_labels)}\n')
+
+	result_tst = compute_tst_mae(TST_labels, TST_preds, 'All')
+	print(result_tst)
+	lines.append(result_tst)
+
+
+
+	AHI_labels, AHI_preds = np.array(AHI_labels), np.array(AHI_preds)	
+	result_mae = compute_segmented_mae(AHI_labels, AHI_preds)
+	print(result_mae) 
+	lines.append(result_mae)
+
+
+	icc = calculate_icc_standard(AHI_labels, AHI_preds)
+	result_icc = f'ICC: {icc:.3f}\n'
+	print(result_icc)
+	lines.append(result_icc)
+
+	result_cm = calculate_cm(AHI_labels, AHI_preds, 'All')
+	print(result_cm)
+	lines.append(result_cm)
+
+
+	lines.append('\n')
+	lines.append('============================\n')
+
+
+	with open(log_path, "a", encoding="utf-8") as f:
+		for line in lines:
+			f.write(line + "\n")
+	
 	
 	plot_person_level_results(
 		y_true_list=AHI_labels,
