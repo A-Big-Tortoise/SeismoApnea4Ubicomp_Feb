@@ -159,6 +159,38 @@ def choose_gpu_by_model_process_count():
 	return best_gpu
 
 
+
+def load_val_test_data(data_path, fold_idx):
+	if fold_idx == 1:
+		train_fold = [3, 4]
+		valid_fold = [2]
+	if fold_idx == 2:
+		train_fold = [1, 4]
+		valid_fold = [3]
+	if fold_idx == 3:
+		train_fold = [1, 2]
+		valid_fold = [4]
+	if fold_idx == 4:
+		train_fold = [2, 3]
+		valid_fold = [1]
+	
+	val_data, test_data = [], []
+	for i in range(1, 5):
+		print(f'Loading data from fold {i} ...')
+		data_file_path = data_path + f'fold{i}.npy'
+		all_data = np.load(data_file_path)
+		if i in train_fold: pass
+		elif i in valid_fold: val_data.append(all_data)
+		else: test_data.append(all_data)
+
+	print(f'Total val files: {len(val_data)}, Total test files: {len(test_data)}')
+	val_data = np.concatenate(val_data)
+	test_data = np.concatenate(test_data)
+	print(f'Loaded Val Data: {val_data.shape}, Loaded Test Data: {test_data.shape}')
+	return val_data, test_data
+
+
+
 def load_train_val_test_data(data_path, fold_idx):
 	if fold_idx == 1:
 		train_fold = [3, 4]
@@ -326,6 +358,41 @@ def augmentation_TriClass(X, Y, Z, Labels, others):
 
 	return X, Y, Z, Labels, others
 
+def augmentation_MTL_Z(Z, Events, Stages, others, std):
+	augmented_Z = []
+	augmented_Events, augmented_Stages, augmented_Others = [], [], []
+
+	for i in range(len(Z)):
+		cnt = 0
+
+		if Events[i] != 0 or Stages[i] != 0: 
+			z_aug = [-Z[i], Z[i, ::-1], -Z[i, ::-1], modify_magnitude_with_gaussian_noise(Z[i], noise_std=std)]
+			augmented_Z.extend(z_aug)
+			cnt += 4
+		else:
+			# if np.random.rand() < 0.01:
+			# 	x_aug = [-X[i], X[i, ::-1], -X[i, ::-1]]
+			# 	y_aug = [-Y[i], Y[i, ::-1], -Y[i, ::-1]]
+		
+			if np.random.rand() < 0.1:
+				z_aug = [-Z[i], Z[i, ::-1], -Z[i, ::-1]]
+				augmented_Z.extend(z_aug)
+				cnt += 3
+			if np.random.rand() < 0.1:
+				z_aug = modify_magnitude_with_gaussian_noise(Z[i], noise_std=std)
+				augmented_Z.append(z_aug)
+				cnt += 1
+
+		augmented_Events.extend([Events[i]] * cnt)
+		augmented_Stages.extend([Stages[i]] * cnt)
+		augmented_Others.extend([others[i]] * cnt)
+
+	Z = np.concatenate((Z, np.array(augmented_Z)), axis=0)
+	Events = np.concatenate((Events, np.array(augmented_Events)), axis=0)
+	Stages = np.concatenate((Stages, np.array(augmented_Stages)), axis=0)
+	others = np.concatenate((others, np.array(augmented_Others)), axis=0)
+
+	return Z, Events, Stages, others
 
 
 def augmentation_MTL(X, Y, Z, Events, Stages, others, std):
@@ -681,6 +748,38 @@ def data_preprocess_MTL_Seqlen(data, Type, duration):
 		print(f'Events_{Type} {unique_events[i]}: ', np.sum(Events == unique_events[i]))
 	
 	return X, Y, Z, Stages, Events, others
+
+
+def data_preprocess_MTL_Z(data, Type, std=5):
+	print('-'*50)
+	print(f'In {Type} ...')
+
+	Z = data[:, 12000:18000]
+	# others = data[:, :-1]
+	others = data[:, -6:-2]
+	Stages = data[:, -2]
+	Events = data[:, -1]
+
+	# X, Y, Z = denoise(X), denoise(Y), denoise(Z)
+	Z = denoise_iter(Z)
+	print('Denoising')
+	Z = resample_poly(Z,1,4,axis=1)
+	Z = Z[:, 5:int(60*100/4)-5]
+	print(f'Downsampled')
+
+	# X, Y, Z = normalize2(X), normalize2(Y), normalize2(Z)
+	Z = normalize(Z)
+	print("Normalization")
+	if Type == 'train':
+		Z, Events, Stages, others = augmentation_MTL_Z(Z, Events, Stages, others, std)
+		print(f'After Augmentation, Events_{Type}.shape: ', Events.shape)
+
+	unique_events = np.unique(Events)
+	for i in range(len(unique_events)):
+		print(f'Events_{Type} {unique_events[i]}: ', np.sum(Events == unique_events[i]))
+	
+	return Z, Stages, Events, others
+
 
 
 
@@ -1147,13 +1246,58 @@ def npy2dataset_true_MTL_Seqlen(data_path, fold_idx, duration, args):
 
 
 
+def npy2dataset_true_MTL_Z(data_path, fold_idx, args):
+	"""Shape of each batch: [batch_size, channels, seq_len]"""
+	train_data, val_data, test_data = load_train_val_test_data(data_path, fold_idx)
+
+	Z_train, Stages_train, Events_train, others_train = data_preprocess_MTL_Z(train_data, 'train', args.std)
+	Z_val, Stages_val, Events_val, others_val = data_preprocess_MTL_Z(val_data, 'val', args.std)
+	Z_test, Stages_test, Events_test, others_test = data_preprocess_MTL_Z(test_data, 'test', args.std)
+
+	print(f'Z_train: {Z_train.shape}, Z_val: {Z_val.shape}, Z_test: {Z_test.shape}')
+
+	if args.XYZ == 'Z':
+		Signals_train = np.expand_dims(Z_train, axis=-1)
+		Signals_val = np.expand_dims(Z_val, axis=-1)
+		Signals_test = np.expand_dims(Z_test, axis=-1)
+
+
+
+	print('...Data Distribution...')
+	print('In Training')
+	print(f'Wake/Sleep: {np.sum(Stages_train==1)}/{np.sum(Stages_train==0)}')
+	print(f'Apnea/Non-Apnea: {np.sum(Events_train==1)}/{np.sum(Events_train==0)-np.sum(Stages_train==1)}')
+
+	print('In Validation')
+	print(f'Wake/Sleep: {np.sum(Stages_val==1)}/{np.sum(Stages_val==0)}')
+	print(f'Apnea/Non-Apnea: {np.sum(Events_val==1)}/{np.sum(Events_val==0)-np.sum(Stages_val==1)}')
+
+	print('In Testing')
+	print(f'Wake/Sleep: {np.sum(Stages_test==1)}/{np.sum(Stages_test==0)}')
+	print(f'Apnea/Non-Apnea: {np.sum(Events_test==1)}/{np.sum(Events_test==0)-np.sum(Stages_test==1)}')
+
+	train_dataset = ApneaDataset_MTL(Signals_train, Stages_train, Events_train)
+
+	train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, drop_last=True)
+	val_dataset = ApneaDataset_MTL(Signals_val, Stages_val, Events_val, others_val)
+	val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, drop_last=True)
+
+	test_dataset = ApneaDataset_MTL(Signals_test, Stages_test, Events_test, others_test)
+	test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, drop_last=True)
+
+	return train_loader, val_loader, test_loader
+
+
+
+
+
 def npy2dataset_true_MTL(data_path, fold_idx, args):
 	"""Shape of each batch: [batch_size, channels, seq_len]"""
 	train_data, val_data, test_data = load_train_val_test_data(data_path, fold_idx)
 
-	X_train, Y_train, _, Stages_train, Events_train, others_train = data_preprocess_MTL(train_data, 'train', args.std)
-	X_val, Y_val, _, Stages_val, Events_val, others_val = data_preprocess_MTL(val_data, 'val', args.std)
-	X_test, Y_test, _, Stages_test, Events_test, others_test = data_preprocess_MTL(test_data, 'test', args.std)
+	X_train, Y_train, Z_train, Stages_train, Events_train, others_train = data_preprocess_MTL(train_data, 'train', args.std)
+	X_val, Y_val, Z_val, Stages_val, Events_val, others_val = data_preprocess_MTL(val_data, 'val', args.std)
+	X_test, Y_test, Z_test, Stages_test, Events_test, others_test = data_preprocess_MTL(test_data, 'test', args.std)
 
 	print(f'X_train: {X_train.shape}, X_val: {X_val.shape}, X_test: {X_test.shape}')
 
@@ -1169,6 +1313,14 @@ def npy2dataset_true_MTL(data_path, fold_idx, args):
 		Signals_train = np.expand_dims(Y_train, axis=-1)
 		Signals_val = np.expand_dims(Y_val, axis=-1)
 		Signals_test = np.expand_dims(Y_test, axis=-1)
+	elif args.XYZ == 'Z':
+		Signals_train = np.expand_dims(Z_train, axis=-1)
+		Signals_val = np.expand_dims(Z_val, axis=-1)
+		Signals_test = np.expand_dims(Z_test, axis=-1)
+	elif args.XYZ == 'XYZ':
+		Signals_train = np.stack([X_train, Y_train, Z_train], axis=-1) 
+		Signals_val = np.stack([X_val, Y_val, Z_val], axis=-1)
+		Signals_test = np.stack([X_test, Y_test, Z_test], axis=-1)
 
 
 	print('...Data Distribution...')
@@ -1292,7 +1444,8 @@ def npy2dataset_true_MTL_REC(data_path, fold_idx, args):
 
 def npy2dataset_inference_true_MTL(data_path, fold_idx, args):
 	"""Shape of each batch: [batch_size, channels, seq_len]"""
-	_, val_data, test_data = load_train_val_test_data(data_path, fold_idx)
+	# _, val_data, test_data = load_train_val_test_data(data_path, fold_idx)
+	val_data, test_data = load_val_test_data(data_path, fold_idx)
 
 
 	X_val, Y_val, _, Stages_val, Events_val, others_val = data_preprocess_MTL(val_data, 'val')

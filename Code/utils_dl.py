@@ -1785,7 +1785,7 @@ def inference_MTL_REC(model, data_loader, device, tta_method=None):
 
 
 
-def inference_MTL(model, data_loader, device, tta_method=None):
+def inference_MTL(model, data_loader, device, tta_method=None, std=5):
     model.eval()
 
 
@@ -1811,7 +1811,7 @@ def inference_MTL(model, data_loader, device, tta_method=None):
                     _, predicted_stage = torch.max(outputs_stage.data, 1) 
                     _, predicted_apnea = torch.max(outputs_apnea.data, 1)  
                 if tta_method == 'avgnew':
-                    outputs4_stage, outputs4_apnea, _, _, _ = model(modify_magnitude_with_gaussian_noise_batch(data))
+                    outputs4_stage, outputs4_apnea, _, _, _ = model(modify_magnitude_with_gaussian_noise_batch(data, noise_std=std))
                     outputs_stage = (outputs1_stage + outputs2_stage + outputs3_stage + outputs4_stage) / 4
                     outputs_apnea = (outputs1_apnea + outputs2_apnea + outputs3_apnea + outputs4_apnea) / 4
                     _, predicted_stage = torch.max(outputs_stage.data, 1)

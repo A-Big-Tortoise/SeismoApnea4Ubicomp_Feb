@@ -22,7 +22,7 @@ if __name__ == "__main__":
 	parser.add_argument('--epochs', type=int, default=75)
 	parser.add_argument('--lr', type=float, default=2e-4)
 	parser.add_argument('--dropout', type=float, default=0.2) 
-	parser.add_argument('--XYZ', type=str, default='Y')
+	parser.add_argument('--XYZ', type=str, default='Z')
 	parser.add_argument('--save_bacc', type=float, default=0.75)
 	parser.add_argument('--tta_method', type=str, default='avgnew')
 	parser.add_argument('--threhold', type=str, default='F1')
@@ -32,6 +32,7 @@ if __name__ == "__main__":
 	parser.add_argument('--lambda_hinge', type=float, default=0)
 	parser.add_argument('--gama_stage', type=float, default=0)
 	parser.add_argument('--gama_apnea', type=float, default=0)
+	parser.add_argument('--std', type=float, default=5)
 
 	args = parser.parse_args()
 	seed_everything(args.seed)
@@ -74,7 +75,7 @@ if __name__ == "__main__":
 		
 		optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 		scheduler = StepLR(optimizer, step_size=30, gamma=0.9)
-		data_path = f'Data/fold_data_p109_{Type}_45s/'
+		data_path = f'Data/fold_data_p109_{Type}_60s/'
 		train_loader, val_loader, test_loader = npy2dataset_true_MTL(data_path, fold_idx, args)
 
 

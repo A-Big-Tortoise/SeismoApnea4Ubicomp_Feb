@@ -146,7 +146,7 @@ def normalize_1d(data):
 
 
 
-def modify_magnitude_with_gaussian_noise_batch(x_in, fs=10, band=(0, 1), noise_std=4, clip_negative=True, return_spectrum=False):
+def modify_magnitude_with_gaussian_noise_batch(x_in, fs=10, band=(0, 1), noise_std=5, clip_negative=True, return_spectrum=False):
 	"""
 	Apply Gaussian noise to magnitude spectrum of each channel in a batch of 2-channel signals.
 

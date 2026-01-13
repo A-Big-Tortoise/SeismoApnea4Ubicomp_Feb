@@ -112,7 +112,7 @@ if __name__ == "__main__":
 		checkpoint = load_checkpoint(model_save_dir)
 		model.load_state_dict(checkpoint['model_state_dict'])
 
-		preds_stage, labels_stage, probs_stage, preds_apnea, labels_apnea, probs_apnea, others, stage_apnea_mask = inference_MTL(model, test_loader, device, tta_method=args.tta_method)
+		preds_stage, labels_stage, probs_stage, preds_apnea, labels_apnea, probs_apnea, others, stage_apnea_mask = inference_MTL(model, test_loader, device, tta_method=args.tta_method, std=args.std)
 		best_threshold_stage = threshold_adjustment(np.array(probs_stage)[:, 1], labels_stage, 'Stage')
 		best_threshold_apnea = threshold_adjustment(np.array(probs_apnea)[:, 1], labels_apnea, 'Apnea')
 

@@ -4,7 +4,7 @@ import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
-from Code.utils import seed_everything, npy2dataset_true_MTL, choose_gpu_by_model_process_count
+from Code.utils import seed_everything, npy2dataset_true_MTL_Z, choose_gpu_by_model_process_count
 from Code.utils_dl import train_classifier_MTL
 from Code.models.clf import ApneaClassifier_PatchTST_MTL
 from Code.inference_mtl import load_checkpoint, inference_MTL, threshold_adjustment
@@ -17,12 +17,12 @@ import pandas as pd
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Apnea Detection - BSG')
 	parser.add_argument('--seed', type=int, default=42)
-	parser.add_argument('--seq_len', type=int, default=590)
+	parser.add_argument('--seq_len', type=int, default=600*2.5-10)
 	parser.add_argument('--batch_size', type=int, default=256)
 	parser.add_argument('--epochs', type=int, default=75)
 	parser.add_argument('--lr', type=float, default=2e-4)
 	parser.add_argument('--dropout', type=float, default=0.2) 
-	parser.add_argument('--XYZ', type=str, default='XYZ')
+	parser.add_argument('--XYZ', type=str, default='Z')
 	parser.add_argument('--save_bacc', type=float, default=0.75)
 	parser.add_argument('--tta_method', type=str, default='avgnew')
 	parser.add_argument('--threhold', type=str, default='F1')
@@ -32,13 +32,14 @@ if __name__ == "__main__":
 	parser.add_argument('--lambda_hinge', type=float, default=0)
 	parser.add_argument('--gama_stage', type=float, default=0)
 	parser.add_argument('--gama_apnea', type=float, default=0)
+	parser.add_argument('--std', type=float, default=5)
 
 	args = parser.parse_args()
 	seed_everything(args.seed)
 
 	Model = 'PatchTST'
 	Type = 'MTL'
-	Experiment = 'Inference'
+	Experiment = 'Tri_Axis_Comp'
 
 	torch.cuda.empty_cache()
 	cuda = choose_gpu_by_model_process_count()
@@ -52,7 +53,9 @@ if __name__ == "__main__":
 	for fold_idx in range(1, 5):
 		model_save_fold_name = f'Experiments/{Experiment}/Models/{model_save_folder}/fold{fold_idx}/'
 		if Model == 'PatchTST':
-			patch_len = 24
+			# patch_len = 24
+
+			patch_len = 64
 			n_layers = 4
 			d_model = 64
 			n_heads = 4
@@ -74,8 +77,8 @@ if __name__ == "__main__":
 		
 		optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 		scheduler = StepLR(optimizer, step_size=30, gamma=0.9)
-		data_path = f'Data/fold_data_p109_{Type}_45s/'
-		train_loader, val_loader, test_loader = npy2dataset_true_MTL(data_path, fold_idx, args)
+		data_path = f'Data/fold_data_p109_{Type}_60s/'
+		train_loader, val_loader, test_loader = npy2dataset_true_MTL_Z(data_path, fold_idx, args)
 
 
 		train_classifier_MTL(
