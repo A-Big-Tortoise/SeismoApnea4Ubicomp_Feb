@@ -6,7 +6,7 @@ sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 from Code.utils_dsp import denoise, normalize_1d
 from Code.models.clf import ApneaClassifier_PatchTST_MTL
-from Code.utils import choose_gpu_by_model_process_count, calculate_icc_standard, ahi_to_severity, calculate_cm
+from Code.utils import choose_gpu_by_model_process_count, calculate_icc_standard, calculate_cm
 import torch
 import pandas as pd
 from sklearn.metrics import confusion_matrix
@@ -145,7 +145,6 @@ if __name__ == "__main__":
 
 	path = f'Experiments/{Experiment}/Models/{model_folder_name}/New_Seismo_AHI_{step_sig_apn//10}s_larger2_change106108134_change29_no153119241149932_with108'
 	sleep_path = f'Experiments/{Experiment}/Models/{model_folder_name}/New_Seismo_TST_{step_sig_sleep//10}s_larger2_change106108134_change29_no153119241149932_with108'
-
 
 
 	AHI_labels, AHI_preds = np.array(AHI_labels), np.array(AHI_preds)	

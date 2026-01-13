@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
 from Code.utils import npy2dataset
-from Code.models.clf import ApneaClassifier_PatchTST, ApneaClassifier_PatchTST_MTL_REC
+from Code.models.clf import ApneaClassifier_PatchTST, ApneaClassifier_PatchTST_MTL
 from Code.utils_dl import inference
 import argparse
 import torch.onnx
@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
 	for fold_idx in range(1, 5):
 		fold_idx = int(fold_idx)
-		model_save_fold_name = f'Models/{args.XYZ}_60s_F1_ws1_wa1_REC0.001_export/fold{fold_idx}/'
+		model_save_fold_name = f'Experiments/Inference/Models/{args.XYZ}_60s_F1_ws1_wa1/fold{fold_idx}/'
 
 		patch_len = 24
 		n_layers = 4
@@ -48,7 +48,7 @@ if __name__ == '__main__':
 		n_heads = 4
 		d_ff = 256           
 		mask_ratio = 0.5
-		model = ApneaClassifier_PatchTST_MTL_REC(
+		model = ApneaClassifier_PatchTST_MTL(
 		# model = ApneaClassifier_Dual_PatchTST(
 			input_size=2, num_classes=2,
 			seq_len=args.seq_len, patch_len=patch_len,
@@ -64,7 +64,6 @@ if __name__ == '__main__':
 
 
 		sorted_files = sorted(os.listdir(model_folder), key=lambda x: int(x.split('_')[0][5:]), reverse=False)
-		# print(f'sorted_files: {sorted(os.listdir(model_folder))}')
 
 		model_path = model_folder + sorted_files[-1]
 		# print(f'model_path: {model_path}')
@@ -86,12 +85,12 @@ if __name__ == '__main__':
 
 		onnx_model_folder = 'Experiments/Inference/onnx_models/'
 
-		onnx_model_path = onnx_model_folder + f'model_{fold_idx}_b32.onnx'
+		onnx_model_path = onnx_model_folder + f'model_{fold_idx}.onnx'
 
 		with torch.no_grad():
 			model.eval()
 			torch.onnx.export(model, 
-								torch.randn(32, 2, 590).to(device), 
+								torch.randn(1, 2, 590).to(device), 
 								onnx_model_path, 
 								verbose=False, input_names=['input'], 
 								output_names=['output'],
@@ -108,8 +107,8 @@ if __name__ == '__main__':
 			print('The model is valid!')
 			print(f'ONNX model saved at: {onnx_model_path}')
 
-		sess = ort.InferenceSession(f"Experiments/Inference/onnx_models/model_{fold_idx}_b32.onnx", providers=["CPUExecutionProvider"])
+		sess = ort.InferenceSession(f"Experiments/Inference/onnx_models/model_{fold_idx}.onnx", providers=["CPUExecutionProvider"])
  
-		x = np.random.randn(32, 2, 590).astype(np.float32)
+		x = np.random.randn(1, 2, 590).astype(np.float32)
 		outs = sess.run(None, {"input": x})
 		print([o.shape for o in outs])

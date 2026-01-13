@@ -37,8 +37,6 @@ if __name__ == "__main__":
 	signals = signals.astype(np.float32)
 	print(f'Signals shape before preprocessing: {signals.shape}')
 	onnx_model_folder = 'Experiments/Inference/onnx_models/'
-	# for model in os.listdir(onnx_model_folder):
-	# 	print(f'Loading ONNX model: {model} ...')
 	onnx_model_path = onnx_model_folder + 'model_1_b32.onnx'
 
 	if version == "CPU":

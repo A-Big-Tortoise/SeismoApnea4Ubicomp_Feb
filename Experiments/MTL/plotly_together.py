@@ -6,14 +6,16 @@ sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 from Code.utils_dsp import denoise, normalize_1d
 from Code.models.clf import ApneaClassifier_PatchTST_MTL
-from Code.utils import choose_gpu_by_model_process_count, calculate_icc_standard, ahi_to_severity
+from Code.utils import choose_gpu_by_model_process_count, calculate_icc_standard, calculate_cm
 from Code.plotly_xz_mtl import plot_person_level_results_sleep \
 	 , plot_person_level_results, concatenate_segments, inference \
 	 , ratio_check_lst, get_wake_masks_pred, get_wake_masks_29 \
-	 , process_allnight_data, count_continuous_ones, compute_segmented_mae \
+	 , process_allnight_data, count_continuous_ones \
      , load_configs, load_model_MTL
 import torch
 import pandas as pd
+from Code.plotly_xz_mtl import ratio_check_lst, process_allnight_data
+from Code.plotly_xz_mtl_rec import compute_segmented_mae, compute_tst_mae
 
 
 
@@ -85,17 +87,17 @@ if __name__ == "__main__":
 
 		# ============ Inference ============
 		model_folder_stage = f'Experiments/{Experiment}/Models/{model_folder_name_stage}/fold{fold_idx}/PatchTST_patchlen24_nlayer4_dmodel64_nhead4_dff256/'
-		model_stage = load_model_MTL(model_folder_stage, device, axis=len(XYZ))
+		model_stage = load_model_MTL(model_folder_stage, duration, device, axis=len(XYZ))
 		
-		pred_res_sleep, _ = inference(X_concat, Y_concat,model_stage, device, step_sig_sleep, threshold=fold_to_threshold_stage[fold_idx], XY=XYZ)
+		pred_res_sleep, _ = inference(X_concat, Y_concat, model_stage, device, step_sig_sleep, threshold=fold_to_threshold_stage[fold_idx], XY=XYZ, duration=duration)
 		pad_length_sleep = 60 // step_sig_sleep
 		pred_res_sleep = np.pad(pred_res_sleep, (pad_length_sleep, 1), mode='constant', constant_values=1)
 		pred_time_sleep = np.arange(len(pred_res_sleep)) * step_sig_sleep / 10
 
 
 		model_folder_apnea = f'Experiments/{Experiment}/Models/{model_folder_name_apnea}/fold{fold_idx}/PatchTST_patchlen24_nlayer4_dmodel64_nhead4_dff256/'
-		model_apnea = load_model_MTL(model_folder_apnea, device, axis=len(XYZ))
-		_, pred_res_apn = inference(X_concat, Y_concat, model_apnea, device, step_sig_apn, threshold=fold_to_threshold_apn[fold_idx], XY=XYZ)	
+		model_apnea = load_model_MTL(model_folder_apnea, duration, device, axis=len(XYZ))
+		_, pred_res_apn = inference(X_concat, Y_concat, model_apnea, device, step_sig_apn, threshold=fold_to_threshold_apn[fold_idx], XY=XYZ, duration=duration)	
 		pad_length_apn = 600 // step_sig_apn
 		pred_res_apn = np.pad(pred_res_apn, (pad_length_apn, 0), mode='constant', constant_values=0)
 		pred_time_apn = np.arange(len(pred_res_apn)) * step_sig_apn / 10  
@@ -142,13 +144,49 @@ if __name__ == "__main__":
 		AHI_labels.append(AHI_label)
 		AHI_preds.append(AHI_preds_processed_label)
 		
+		
+	log_path = f'Experiments/{Experiment}/Models/logs_together.txt'
+	if not os.path.exists(os.path.dirname(log_path)):
+		os.makedirs(os.path.dirname(log_path))
+
+
 	path = f'Experiments/{Experiment}/Models/AHI_{step_sig_apn//10}s_larger2_change106108134_change29_no153119241149932_with108'
 	sleep_path = f'Experiments/{Experiment}/Models/TST_{step_sig_sleep//10}s_larger2_change106108134_change29_no153119241149932_with108'
 
 
+	lines = []
+	lines.append(f'All #: {len(AHI_labels)}\n')
+
+	result_tst = compute_tst_mae(TST_labels, TST_preds, 'All')
+	print(result_tst)
+	lines.append(result_tst)
+
+
+
 	AHI_labels, AHI_preds = np.array(AHI_labels), np.array(AHI_preds)	
-	result = compute_segmented_mae(AHI_labels, AHI_preds)
-	print(result) 
+	result_mae = compute_segmented_mae(AHI_labels, AHI_preds)
+	print(result_mae) 
+	lines.append(result_mae)
+
+
+	icc = calculate_icc_standard(AHI_labels, AHI_preds)
+	result_icc = f'ICC: {icc:.3f}\n'
+	print(result_icc)
+	lines.append(result_icc)
+
+	result_cm = calculate_cm(AHI_labels, AHI_preds, 'All')
+	print(result_cm)
+	lines.append(result_cm)
+
+
+	lines.append('\n')
+	lines.append('============================\n')
+
+
+	with open(log_path, "a", encoding="utf-8") as f:
+		for line in lines:
+			f.write(line + "\n")
+	
 	
 	plot_person_level_results(
 		y_true_list=AHI_labels,
