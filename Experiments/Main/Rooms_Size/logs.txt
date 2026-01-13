@@ -1,0 +1,38 @@
+All #: 60
+
+TST: 0.80 $\pm$ 0.52 
+
+Normal (<5): 3.67 $\pm$ 2.55
+Mild (5–15): 4.28 $\pm$ 3.15
+Moderate (15–30): 7.26 $\pm$ 4.95
+Severe (≥30): 9.12 $\pm$ 10.20
+
+Overall MAE: 4.96 $\pm$ 4.71
+Sample counts per severity: [27/17/11/5]
+
+ICC: 0.882
+
+All, BACC, F1: 69.97\%, 71.64\%
+
+
+============================
+
+All #: 10
+
+TST: 1.00 $\pm$ 0.63 
+
+Normal (<5): 4.10 $\pm$ 2.26
+Mild (5–15): 7.10 $\pm$ 4.66
+Moderate (15–30): 2.85 $\pm$ 1.24
+Severe (≥30): 9.09 $\pm$ 0.00
+
+Overall MAE: 5.25 $\pm$ 3.61
+Sample counts per severity: [4/3/2/1]
+
+ICC: 0.846
+
+All, BACC, F1: 77.08\%, 73.75\%
+
+
+============================
+

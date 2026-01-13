@@ -328,7 +328,7 @@ def augmentation_TriClass(X, Y, Z, Labels, others):
 
 
 
-def augmentation_MTL(X, Y, Z, Events, Stages, others):
+def augmentation_MTL(X, Y, Z, Events, Stages, others, std):
 	augmented_X, augmented_Y, augmented_Z = [], [], []
 	augmented_Events, augmented_Stages, augmented_Others = [], [], []
 
@@ -336,9 +336,9 @@ def augmentation_MTL(X, Y, Z, Events, Stages, others):
 		cnt = 0
 
 		if Events[i] != 0 or Stages[i] != 0: 
-			x_aug = [-X[i], X[i, ::-1], -X[i, ::-1], modify_magnitude_with_gaussian_noise(X[i])]
-			y_aug = [-Y[i], Y[i, ::-1], -Y[i, ::-1], modify_magnitude_with_gaussian_noise(Y[i])]
-			z_aug = [-Z[i], Z[i, ::-1], -Z[i, ::-1], modify_magnitude_with_gaussian_noise(Z[i])]
+			x_aug = [-X[i], X[i, ::-1], -X[i, ::-1], modify_magnitude_with_gaussian_noise(X[i], noise_std=std)]
+			y_aug = [-Y[i], Y[i, ::-1], -Y[i, ::-1], modify_magnitude_with_gaussian_noise(Y[i], noise_std=std)]
+			z_aug = [-Z[i], Z[i, ::-1], -Z[i, ::-1], modify_magnitude_with_gaussian_noise(Z[i], noise_std=std)]
 			augmented_X.extend(x_aug)
 			augmented_Y.extend(y_aug)
 			augmented_Z.extend(z_aug)
@@ -369,9 +369,9 @@ def augmentation_MTL(X, Y, Z, Events, Stages, others):
 				augmented_Z.extend(z_aug)
 				cnt += 3
 			if np.random.rand() < 0.1:
-				x_aug = modify_magnitude_with_gaussian_noise(X[i])
-				y_aug = modify_magnitude_with_gaussian_noise(Y[i])
-				z_aug = modify_magnitude_with_gaussian_noise(Z[i])
+				x_aug = modify_magnitude_with_gaussian_noise(X[i], noise_std=std)
+				y_aug = modify_magnitude_with_gaussian_noise(Y[i], noise_std=std)
+				z_aug = modify_magnitude_with_gaussian_noise(Z[i], noise_std=std)
 				augmented_X.append(x_aug)
 				augmented_Y.append(y_aug)
 				augmented_Z.append(z_aug)
@@ -685,7 +685,7 @@ def data_preprocess_MTL_Seqlen(data, Type, duration):
 
 
 
-def data_preprocess_MTL(data, Type):
+def data_preprocess_MTL(data, Type, std=5):
 	print('-'*50)
 	print(f'In {Type} ...')
 
@@ -733,7 +733,7 @@ def data_preprocess_MTL(data, Type):
 	X, Y, Z = normalize(X), normalize(Y), normalize(Z)
 	print("Normalization")
 	if Type == 'train':
-		X, Y, Z, Events, Stages, others = augmentation_MTL(X, Y, Z, Events, Stages, others)
+		X, Y, Z, Events, Stages, others = augmentation_MTL(X, Y, Z, Events, Stages, others, std)
 		print(f'After Augmentation, Events_{Type}.shape: ', Events.shape)
 
 	unique_events = np.unique(Events)
@@ -1151,9 +1151,9 @@ def npy2dataset_true_MTL(data_path, fold_idx, args):
 	"""Shape of each batch: [batch_size, channels, seq_len]"""
 	train_data, val_data, test_data = load_train_val_test_data(data_path, fold_idx)
 
-	X_train, Y_train, _, Stages_train, Events_train, others_train = data_preprocess_MTL(train_data, 'train')
-	X_val, Y_val, _, Stages_val, Events_val, others_val = data_preprocess_MTL(val_data, 'val')
-	X_test, Y_test, _, Stages_test, Events_test, others_test = data_preprocess_MTL(test_data, 'test')
+	X_train, Y_train, _, Stages_train, Events_train, others_train = data_preprocess_MTL(train_data, 'train', args.std)
+	X_val, Y_val, _, Stages_val, Events_val, others_val = data_preprocess_MTL(val_data, 'val', args.std)
+	X_test, Y_test, _, Stages_test, Events_test, others_test = data_preprocess_MTL(test_data, 'test', args.std)
 
 	print(f'X_train: {X_train.shape}, X_val: {X_val.shape}, X_test: {X_test.shape}')
 

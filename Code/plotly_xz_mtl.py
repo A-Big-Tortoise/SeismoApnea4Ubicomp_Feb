@@ -280,7 +280,7 @@ def plot_all_concatenated_signals(signals,
 	return server_file
 
 
-def inference(X_concat, Y_concat, model, device, step_sig, threshold, XY=None):
+def inference(X_concat, Y_concat, model, device, step_sig, threshold, duration, XY=None):
 	if XY is None or XY == 'XY':
 		model_input = np.stack([X_concat, Y_concat], axis=0)  # shape (2, N)
 		model_input = model_input.reshape(1, 2, -1)  # shape (1, 2, N)
@@ -293,9 +293,9 @@ def inference(X_concat, Y_concat, model, device, step_sig, threshold, XY=None):
 
 	segments = []
 
-	for i in range(0, model_input.shape[2] - 600 + step_sig, step_sig):
-		segment = model_input[:, :, i+5:i+595]
-		if segment.shape[2] == 590:
+	for i in range(0, model_input.shape[2] - duration * 10 + step_sig, step_sig):
+		segment = model_input[:, :, i+5:i+duration*10-5]  # shape: [1, C, 590]
+		if segment.shape[2] == duration * 10 - 10:
 			segments.append(segment)
 
 
@@ -349,11 +349,11 @@ def get_wake_masks(SleepStage_concat, step_sleep):
 	return wake_masks
 
 
-def get_wake_masks_pred(SleepStage_concat, step_sleep):
+def get_wake_masks_pred(SleepStage_concat, step_sleep, duration=60):
 	sleep_segments = []
-	for i in range(0, len(SleepStage_concat) - 60 + step_sleep, step_sleep):
-		sleep_segment = SleepStage_concat[i:i+60]
-		if len(sleep_segment) == 60:
+	for i in range(0, len(SleepStage_concat) - duration + step_sleep, step_sleep):
+		sleep_segment = SleepStage_concat[i:i+duration]
+		if len(sleep_segment) == duration:
 			sleep_segments.append(sleep_segment)
 
 	sleep_segments = np.array(sleep_segments)  # shape: [N, 60]
@@ -368,11 +368,11 @@ def get_wake_masks_pred(SleepStage_concat, step_sleep):
 	return wake_masks
 
 
-def get_wake_masks_29(SleepStage_concat, step_sleep):
+def get_wake_masks_29(SleepStage_concat, step_sleep, duration=60):
 	sleep_segments = []
-	for i in range(0, len(SleepStage_concat) - 60 + step_sleep, step_sleep):
-		sleep_segment = SleepStage_concat[i:i+60]
-		if len(sleep_segment) == 60:
+	for i in range(0, len(SleepStage_concat) - duration + step_sleep, step_sleep):
+		sleep_segment = SleepStage_concat[i:i+duration]
+		if len(sleep_segment) == duration:
 			sleep_segments.append(sleep_segment)
 
 	sleep_segments = np.array(sleep_segments)  # shape: [N, 60]
@@ -380,7 +380,7 @@ def get_wake_masks_29(SleepStage_concat, step_sleep):
 	wake_masks = []
 	for i in range(len(sleep_segments)):
 		sleep_segment = sleep_segments[i]
-		if np.sum(sleep_segment == 4) >= 55 or -1 in sleep_segment:
+		if np.sum(sleep_segment == 4) >= duration - 5 or -1 in sleep_segment:
 			wake_masks.append(i)
 	
 	wake_masks = np.array(wake_masks)
@@ -486,7 +486,7 @@ def ratio_check_lst(npy_ID):
 	if npy_ID in lst: return True
 	else: return False
 
-def load_model_MTL(model_folder, device, axis=2):
+def load_model_MTL(model_folder, duration, device, axis=2):
 	patch_len = 24
 	n_layers = 4
 	d_model = 64
@@ -496,7 +496,7 @@ def load_model_MTL(model_folder, device, axis=2):
 
 	model = ApneaClassifier_PatchTST_MTL(
 		input_size=axis, num_classes=output_class,
-		seq_len=590, patch_len=patch_len,
+		seq_len=duration * 10 - 10, patch_len=patch_len,
 		stride=patch_len // 2,
 		n_layers=n_layers, d_model=d_model,
 		n_heads=n_heads, d_ff=d_ff,
