@@ -280,7 +280,7 @@ def plot_all_concatenated_signals(signals,
 	return server_file
 
 
-def inference(X_concat, Y_concat, model, device, step_sig, threshold, duration, XY=None):
+def inference(X_concat, Y_concat, Z_concat, model, device, step_sig, threshold, duration, XY=None):
 	if XY is None or XY == 'XY':
 		model_input = np.stack([X_concat, Y_concat], axis=0)  # shape (2, N)
 		model_input = model_input.reshape(1, 2, -1)  # shape (1, 2, N)
@@ -288,6 +288,17 @@ def inference(X_concat, Y_concat, model, device, step_sig, threshold, duration, 
 		model_input = X_concat.reshape(1, 1, -1)  # shape (1, 1, N)
 	elif XY == 'Y':
 		model_input = Y_concat.reshape(1, 1, -1)  # shape (1, 1, N)
+	elif XY == 'Z':
+		model_input = Z_concat.reshape(1, 1, -1)  # shape (1, 1, N)
+	elif XY == 'XZ':
+		model_input = np.stack([X_concat, Z_concat], axis=0)  # shape (2, N)
+		model_input = model_input.reshape(1, 2, -1)  # shape (1, 2, N)
+	elif XY == 'YZ':
+		model_input = np.stack([Y_concat, Z_concat], axis=0)  # shape (2, N)
+		model_input = model_input.reshape(1, 2, -1)  # shape (1, 2, N)
+	elif XY == 'XYZ':
+		model_input = np.stack([X_concat, Y_concat, Z_concat], axis=0)  # shape (3, N)
+		model_input = model_input.reshape(1, 3, -1)  # shape (1, 3, N)
 
 	batch_size = 512
 

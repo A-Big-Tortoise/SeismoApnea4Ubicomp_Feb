@@ -76,12 +76,17 @@ if __name__ == "__main__":
 	Ages = []
 	Sexs = []
 	BMIs = []
+	Events = []
+	AHIs = []
 	for ID in useful_ids:
 		df_patient = df.loc[df['ID'] == ID]
 		# print(df_patient)
 		Ages.append(df_patient['Age'].values[0])
 		Sexs.append(df_patient['Sex'].values[0])
 		BMIs.append(df_patient['BMI'].values[0])
+		# CA	OA	MA	HYP
+		AHIs.append(df_patient['AHI'].values[0])
+		Events.append(df_patient['CA'].values[0]+df_patient['OA'].values[0]+df_patient['MA'].values[0]+df_patient['HYP'].values[0])
 	Ages = np.array(Ages)
 	print('Average Age:', np.mean(Ages), np.std(Ages[Ages>18]))
 	print('Average Age:', np.mean(Ages[Ages>18]), np.std(Ages[Ages>18]))
@@ -95,4 +100,15 @@ if __name__ == "__main__":
 	counter = Counter(BMI_groups)
 	print('BMI Group Counts:', counter)
 
+
+	Events = np.array(Events)
+	AHIs = np.array(AHIs)
+
+	normal = np.sum(AHIs < 5)
+	mild = np.sum((AHIs >=5) & (AHIs <15))
+	moderate = np.sum((AHIs >=15) & (AHIs <30))
+	severe = np.sum(AHIs >=30)
+	print('AHI Severity Counts:')
+	print(f'Normal (<5): {normal}, Mild (5-15): {mild}, Moderate (15-30): {moderate}, Severe (30+): {severe}')
+	print(f'Ratio Normal: {normal/len(AHIs):.3f}, Mild: {mild/len(AHIs):.3f}, Moderate: {moderate/len(AHIs):.3f}, Severe: {severe/len(AHIs):.3f}')
 

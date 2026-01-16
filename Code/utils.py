@@ -1321,7 +1321,14 @@ def npy2dataset_true_MTL(data_path, fold_idx, args):
 		Signals_train = np.stack([X_train, Y_train, Z_train], axis=-1) 
 		Signals_val = np.stack([X_val, Y_val, Z_val], axis=-1)
 		Signals_test = np.stack([X_test, Y_test, Z_test], axis=-1)
-
+	elif args.XYZ == 'XZ':
+		Signals_train = np.stack([X_train, Z_train], axis=-1) 
+		Signals_val = np.stack([X_val, Z_val], axis=-1)
+		Signals_test = np.stack([X_test, Z_test], axis=-1)
+	elif args.XYZ == 'YZ':
+		Signals_train = np.stack([Y_train, Z_train], axis=-1) 
+		Signals_val = np.stack([Y_val, Z_val], axis=-1)
+		Signals_test = np.stack([Y_test, Z_test], axis=-1)
 
 	print('...Data Distribution...')
 	print('In Training')

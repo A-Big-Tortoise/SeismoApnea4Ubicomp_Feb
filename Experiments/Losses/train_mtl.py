@@ -22,29 +22,29 @@ if __name__ == "__main__":
 	parser.add_argument('--epochs', type=int, default=75)
 	parser.add_argument('--lr', type=float, default=2e-4)
 	parser.add_argument('--dropout', type=float, default=0.2) 
-	parser.add_argument('--XYZ', type=str, default='YZ')
+	parser.add_argument('--XYZ', type=str, default='XY')
 	parser.add_argument('--save_bacc', type=float, default=0.75)
 	parser.add_argument('--tta_method', type=str, default='avgnew')
 	parser.add_argument('--threhold', type=str, default='F1')
 	parser.add_argument('--lambda_s', type=float, default=1)
 	parser.add_argument('--lambda_a', type=float, default=1)
 	parser.add_argument('--lambda_as', type=float, default=0)
-	parser.add_argument('--lambda_hinge', type=float, default=0)
+	parser.add_argument('--lambda_hinge', type=float, default=0.001)
 	parser.add_argument('--gama_stage', type=float, default=0)
 	parser.add_argument('--gama_apnea', type=float, default=0)
 	parser.add_argument('--std', type=float, default=5)
-
+ 
 	args = parser.parse_args()
 	seed_everything(args.seed)
 
 	Model = 'PatchTST'
 	Type = 'MTL'
-	Experiment = 'Tri_Axis_Comp'
+	Experiment = 'Losses'
 
 	torch.cuda.empty_cache()
 	cuda = choose_gpu_by_model_process_count()
 	device = torch.device(f"cuda:{cuda}" if torch.cuda.is_available() else "cpu")
-	model_save_folder = f'{args.XYZ}_60s_{args.threhold}_ws{args.lambda_s}_wa{args.lambda_a}'
+	model_save_folder = f'{args.XYZ}_{args.threhold}_ws{args.lambda_s}_wa{args.lambda_a}_was{args.lambda_as}_hinge{args.lambda_hinge}'
 	fold_id_threshold_stage = {}
 	fold_id_threshold_apnea = {}
 	fold_id_mapping = {}

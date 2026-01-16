@@ -1,42 +1,41 @@
 import numpy as np
+import plotly.graph_objects as go
 import os, sys
-import yaml
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 from Code.utils_dsp import denoise, normalize_1d
-from Code.models.clf import ApneaClassifier_PatchTST_MTL
+from Code.models.clf import ApneaClassifier_PatchTST_MTL_REC
 from Code.utils import choose_gpu_by_model_process_count, calculate_icc_standard, ahi_to_severity, calculate_cm
-from Code.plotly_xz_mtl import plot_person_level_results_sleep \
-	 , plot_person_level_results, concatenate_segments, inference \
-	 , ratio_check_lst, get_wake_masks_pred, get_wake_masks_29 \
-	 , process_allnight_data, count_continuous_ones  \
-     , load_configs, load_model_MTL
-from Code.plotly_xz_mtl_rec import compute_segmented_mae, compute_tst_mae
+from scipy.signal import resample_poly 
 import torch
 import pandas as pd
-
+from sklearn.metrics import confusion_matrix
+from Code.plotly_xz_mtl_rec import plot_person_level_results_sleep \
+	 , plot_person_level_results, concatenate_segments, inference_REC \
+	 , get_wake_masks_pred, get_wake_masks_29 \
+	 , count_continuous_ones, compute_segmented_mae \
+     , load_configs, load_model_MTL_REC, compute_tst_mae
+from Code.plotly_xz_mtl import ratio_check_lst, process_allnight_data
 
 
 if __name__ == "__main__":
 	data_folder = 'Data/data_60s_30s_yingjian2/'
 	duration = 60
 	overlap = 30
-	cuda = '0'
 	cuda = choose_gpu_by_model_process_count()
 	device = torch.device(f"cuda:{cuda}" if torch.cuda.is_available() else "cpu")
 	df = pd.read_excel('Code/SleepLab.xlsx', engine='openpyxl', sheet_name='Logs')
 
 	id2fold = {}
-
-	step_sig_apn = 100
+	step_sig_apn = 150
 	step_sig_sleep = 10
-	
-	XYZ = 'Y'
-	Experiment = 'Tri_Axis_Comp'
-	model_folder_name = f'{XYZ}_60s_F1_ws1_wa1'
 
+	Experiment = 'Losses'	
+
+	model_folder_name = f'MTL_ws1_wa1_REC0.001'
 	config_path = f"Experiments/{Experiment}/configs/{model_folder_name}.yaml"
+
 
 	fold2id, fold_to_threshold_stage, fold_to_threshold_apn = load_configs(config_path)
 	
@@ -44,16 +43,15 @@ if __name__ == "__main__":
 		for _id in id_list:
 			id2fold[_id] = fold_name
 
-
 	TST_labels, TST_preds = [], []
 	AHI_labels, AHI_preds = [], []
 	for file in sorted(os.listdir(data_folder)):
 		# ============ Load Data ============
 		data = np.load(os.path.join(data_folder, file))
-		ID_npy = data[0, -2]	
+		ID_npy = data[0, -2]		
+		# print(f'Processing Patient ID: {ID_npy}')
 
 		# ============ Data Check ============
-		
 		if ID_npy not in id2fold: continue
 		# if ID_npy in [50, 25, 108, 134, 120, 153, 119]: continue
 		if ID_npy in [24, 50, 25, 134, 153, 119, 114, 99, 32]: continue
@@ -65,6 +63,7 @@ if __name__ == "__main__":
 
 		# ============ Data Loading and Processing ============
 		fold_idx = id2fold.get(ID_npy)
+
 		print(f'Patient ID: {ID_npy}, Shape: {data.shape}, Assigned to fold: {fold_idx}')
 
 		X, Y, Z = data[:, :6000], data[:, 6000:12000], data[:, 12000:18000]
@@ -72,11 +71,11 @@ if __name__ == "__main__":
 		SleepStage = data[:, 42660:42720]
 		Event = data[:, 42720:43320]
 
-		Z_concat, time_xyz = process_allnight_data(Z, duration=duration, overlap=overlap, denoising=True)
-		X_concat, time_xyz = process_allnight_data(X, duration=duration, overlap=overlap, denoising=True)
-		Y_concat, time_xyz = process_allnight_data(Y, duration=duration, overlap=overlap, denoising=True)
-		THO_concat, time_tho_abd = process_allnight_data(THO, duration=duration, overlap=overlap, denoising=False)
-		ABD_concat, time_tho_abd = process_allnight_data(ABD, duration=duration, overlap=overlap, denoising=False)
+		X_concat, time_xyz = process_allnight_data(X, denoising=True)
+		Y_concat, time_xyz = process_allnight_data(Y, denoising=True)
+		THO_concat, time_tho_abd = process_allnight_data(THO, denoising=False)
+		ABD_concat, time_tho_abd = process_allnight_data(ABD, denoising=False)
+
 
 		SleepStage_concat = concatenate_segments(SleepStage, int((duration - overlap) * 1))
 		Event_concat = concatenate_segments(Event, int((duration - overlap) * 10))
@@ -85,16 +84,16 @@ if __name__ == "__main__":
 
 
 		# ============ Inference ============
-		model_folder = f'Experiments/{Experiment}/Models/{model_folder_name}/fold{fold_idx}/PatchTST_patchlen24_nlayer4_dmodel64_nhead4_dff256/'
-		model = load_model_MTL(model_folder, duration, device, axis=len(XYZ))
+		model_folder = f'Experiments/Main/Models/{model_folder_name}/fold{fold_idx}/PatchTST_patchlen24_nlayer4_dmodel64_nhead4_dff256/'
+		model = load_model_MTL_REC(model_folder, duration, device)
 		
-		_, pred_res_apn = inference(X_concat, Y_concat, Z_concat, model, device, step_sig_apn, threshold=fold_to_threshold_apn[fold_idx], duration=duration, XY=XYZ)	
+		_, pred_res_apn = inference_REC(X_concat, Y_concat, model, device, step_sig_apn, threshold=fold_to_threshold_apn[fold_idx], duration=duration)	
 		pad_length_apn = 600 // step_sig_apn
 		pred_res_apn = np.pad(pred_res_apn, (pad_length_apn, 0), mode='constant', constant_values=0)
 		pred_time_apn = np.arange(len(pred_res_apn)) * step_sig_apn / 10  
 
 
-		pred_res_sleep, _ = inference(X_concat, Y_concat, Z_concat, model, device, step_sig_sleep, threshold=fold_to_threshold_stage[fold_idx], duration=duration, XY=XYZ)
+		pred_res_sleep, _ = inference_REC(X_concat, Y_concat,model, device, step_sig_sleep, threshold=fold_to_threshold_stage[fold_idx], duration=duration)
 		pad_length_sleep = 60 // step_sig_sleep
 		pred_res_sleep = np.pad(pred_res_sleep, (pad_length_sleep, 1), mode='constant', constant_values=1)
 		pred_time_sleep = np.arange(len(pred_res_sleep)) * step_sig_sleep / 10
@@ -135,25 +134,24 @@ if __name__ == "__main__":
 
 		TST_labels.append(sleep_time_excel)
 		TST_preds.append(sleep_time_pred)
-		
-
 		AHI_labels.append(AHI_label)
 		AHI_preds.append(AHI_preds_processed_label)
-
-
+		
 	log_path = f'Experiments/{Experiment}/Models/{model_folder_name}/logs.txt'
 	if not os.path.exists(os.path.dirname(log_path)):
 		os.makedirs(os.path.dirname(log_path))
 
 
-	path = f'Experiments/{Experiment}/Models/{model_folder_name}/AHI_{step_sig_apn//10}s_larger2_change106108134_change29_no153119241149932_with108'
-	sleep_path = f'Experiments/{Experiment}/Models/{model_folder_name}/TST_{step_sig_sleep//10}s_larger2_change106108134_change29_no153119241149932_with108'
+	path = f'Experiments/{Experiment}/Models/{model_folder_name}/Seismo_AHI_{step_sig_apn//10}s_larger2_change106108134_change29_no153119241149932_with108'
+	sleep_path = f'Experiments/{Experiment}/Models/{model_folder_name}/Seismo_TST_{step_sig_sleep//10}s_larger2_change106108134_change29_no153119241149932_with108'
+
 
 
 	AHI_labels, AHI_preds = np.array(AHI_labels), np.array(AHI_preds)	
 	result = compute_segmented_mae(AHI_labels, AHI_preds)
 	print(result) 
-	
+
+
 	lines = []
 	lines.append(f'All #: {len(AHI_labels)}\n')
 
