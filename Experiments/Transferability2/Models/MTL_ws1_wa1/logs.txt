@@ -74,3 +74,117 @@ Room1, BACC, F1: 68.33\%, 63.89\%
 
 ============================
 
+Room1 #: 13
+
+TST: 0.80 $\pm$ 0.74 
+
+Normal (<5): 3.83 $\pm$ 2.69
+Mild (5–15): 3.29 $\pm$ 1.71
+Moderate (15–30): N/A
+Severe (≥30): N/A
+
+Overall MAE: 3.71 $\pm$ 2.51
+Sample counts per severity: [10/3/0/0]
+
+ICC: 0.332
+
+Room1, BACC, F1: 68.33\%, 63.89\%
+
+
+============================
+
+Room1 #: 13
+
+TST: 0.80 $\pm$ 0.74 
+
+Normal (<5): 4.97 $\pm$ 3.63
+Mild (5–15): 3.29 $\pm$ 1.71
+Moderate (15–30): N/A
+Severe (≥30): N/A
+
+Overall MAE: 4.58 $\pm$ 3.36
+Sample counts per severity: [10/3/0/0]
+
+ICC: 0.119
+
+Room1, BACC, F1: 63.33\%, 57.52\%
+
+
+============================
+
+Room1 #: 13
+
+TST: 0.80 $\pm$ 0.74 
+
+Normal (<5): 3.83 $\pm$ 2.69
+Mild (5–15): 1.52 $\pm$ 1.18
+Moderate (15–30): N/A
+Severe (≥30): N/A
+
+Overall MAE: 3.30 $\pm$ 2.62
+Sample counts per severity: [10/3/0/0]
+
+ICC: 0.517
+
+Room1, BACC, F1: 68.33\%, 63.89\%
+
+
+============================
+
+Room1 #: 13
+
+TST: 0.80 $\pm$ 0.74 
+
+Normal (<5): 2.55 $\pm$ 2.12
+Mild (5–15): 2.52 $\pm$ 1.86
+Moderate (15–30): N/A
+Severe (≥30): N/A
+
+Overall MAE: 2.55 $\pm$ 2.06
+Sample counts per severity: [10/3/0/0]
+
+ICC: 0.639
+
+Room1, BACC, F1: 73.33\%, 70.68\%
+
+
+============================
+
+Room1 #: 13
+
+TST: 0.80 $\pm$ 0.74 
+
+Normal (<5): 3.43 $\pm$ 2.09
+Mild (5–15): 1.52 $\pm$ 1.18
+Moderate (15–30): N/A
+Severe (≥30): N/A
+
+Overall MAE: 2.99 $\pm$ 2.08
+Sample counts per severity: [10/3/0/0]
+
+ICC: 0.584
+
+Room1, BACC, F1: 68.33\%, 63.89\%
+
+
+============================
+
+Room1 #: 13
+
+TST: 0.80 $\pm$ 0.74 
+
+Normal (<5): 3.03 $\pm$ 1.66
+Mild (5–15): 1.52 $\pm$ 1.18
+Moderate (15–30): N/A
+Severe (≥30): N/A
+
+Overall MAE: 2.68 $\pm$ 1.69
+Sample counts per severity: [10/3/0/0]
+
+ICC: 0.644
+
+Room1, BACC, F1: 68.33\%, 63.89\%
+
+
+============================
+

@@ -71,8 +71,11 @@ if __name__ == "__main__":
 		SleepStage = data[:, 42660:42720]
 		Event = data[:, 42720:43320]
 
+
+
 		X_concat, time_xyz = process_allnight_data(X, denoising=True)
 		Y_concat, time_xyz = process_allnight_data(Y, denoising=True)
+		# Z_concat, time_xyz = process_allnight_data(Z, denoising=True)
 		THO_concat, time_tho_abd = process_allnight_data(THO, denoising=False)
 		ABD_concat, time_tho_abd = process_allnight_data(ABD, denoising=False)
 
@@ -85,15 +88,15 @@ if __name__ == "__main__":
 
 		# ============ Inference ============
 		model_folder = f'Experiments/Main/Models/{model_folder_name}/fold{fold_idx}/PatchTST_patchlen24_nlayer4_dmodel64_nhead4_dff256/'
-		model = load_model_MTL_REC(model_folder, device)
+		model = load_model_MTL_REC(model_folder, duration, device)
 		
-		_, pred_res_apn = inference_REC(X_concat, Y_concat, model, device, step_sig_apn, threshold=fold_to_threshold_apn[fold_idx])	
+		_, pred_res_apn = inference_REC(X_concat, Y_concat, model, device, step_sig_apn, threshold=fold_to_threshold_apn[fold_idx], duration=duration)	
 		pad_length_apn = 600 // step_sig_apn
 		pred_res_apn = np.pad(pred_res_apn, (pad_length_apn, 0), mode='constant', constant_values=0)
 		pred_time_apn = np.arange(len(pred_res_apn)) * step_sig_apn / 10  
 
 
-		pred_res_sleep, _ = inference_REC(X_concat, Y_concat,model, device, step_sig_sleep, threshold=fold_to_threshold_stage[fold_idx])
+		pred_res_sleep, _ = inference_REC(X_concat, Y_concat, model, device, step_sig_sleep, threshold=fold_to_threshold_stage[fold_idx], duration=duration)
 		pad_length_sleep = 60 // step_sig_sleep
 		pred_res_sleep = np.pad(pred_res_sleep, (pad_length_sleep, 1), mode='constant', constant_values=1)
 		pred_time_sleep = np.arange(len(pred_res_sleep)) * step_sig_sleep / 10
@@ -132,7 +135,7 @@ if __name__ == "__main__":
 		print(f'# Apnea Events: {n_apnea_events}, AHI (predicted): {AHI_preds_processed_label:.2f}')
 		print(f'# True Apnea Events: {n_true_apnea_events}, AHI (labels): {AHI_label:.2f}')
 
-		TST_labels.append(sleep_time_excel)
+		TST_labels.append(float(sleep_time_excel))
 		TST_preds.append(sleep_time_pred)
 		AHI_labels.append(AHI_label)
 		AHI_preds.append(AHI_preds_processed_label)
@@ -181,20 +184,27 @@ if __name__ == "__main__":
 	lines.append('============================\n')
 
 
-	with open(log_path, "a", encoding="utf-8") as f:
-		for line in lines:
-			f.write(line + "\n")
+	# with open(log_path, "a", encoding="utf-8") as f:
+	# 	for line in lines:
+	# 		f.write(line + "\n")
+	print(TST_labels)
+	TST_labels, TST_preds = np.array(TST_labels), np.array(TST_preds)
+	data_save_path = '/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Main/figs/'
+	np.save(data_save_path+'AHI_labels.npy', AHI_labels)
+	np.save(data_save_path+'AHI_preds.npy', AHI_preds)
+	np.save(data_save_path+'TST_labels.npy', TST_labels)
+	np.save(data_save_path+'TST_preds.npy', TST_preds)
 	
 	
-	plot_person_level_results(
-		y_true_list=AHI_labels,
-		y_pred_list=AHI_preds,
-		fig_path=path+'.png'
-	)	
+	# plot_person_level_results(
+	# 	y_true_list=AHI_labels,
+	# 	y_pred_list=AHI_preds,
+	# 	fig_path=path+'.png'
+	# )	
 
-	plot_person_level_results_sleep(
-		y_true_list=TST_labels,
-		y_pred_list=TST_preds,
-		ahi_label_list=AHI_labels,
-		fig_path=sleep_path+'.png'
-	)
+	# plot_person_level_results_sleep(
+	# 	y_true_list=TST_labels,
+	# 	y_pred_list=TST_preds,
+	# 	ahi_label_list=AHI_labels,
+	# 	fig_path=sleep_path+'.png'
+	# )

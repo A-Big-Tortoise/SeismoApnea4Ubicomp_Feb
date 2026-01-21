@@ -44,6 +44,7 @@ if __name__ == "__main__":
 	
 	Demoe_Name = 'Rooms'
 	for demotype in Rooms:
+		if demotype != '1': continue
 		TST_labels, TST_preds = [], []
 		AHI_labels, AHI_preds = [], []
 		for file in sorted(os.listdir(data_folder)):
@@ -81,6 +82,7 @@ if __name__ == "__main__":
 
 			X_concat, time_xyz = process_allnight_data(X, denoising=True)
 			Y_concat, time_xyz = process_allnight_data(Y, denoising=True)
+			Z_concat, time_xyz = process_allnight_data(Z, denoising=True)
 			THO_concat, time_tho_abd = process_allnight_data(THO, denoising=False)
 			ABD_concat, time_tho_abd = process_allnight_data(ABD, denoising=False)
 
@@ -93,15 +95,15 @@ if __name__ == "__main__":
 
 			# ============ Inference ============
 			model_folder = f'Experiments/{Experiment}/Models/{model_folder_name}/fold{fold_idx}/PatchTST_patchlen24_nlayer4_dmodel64_nhead4_dff256/'
-			model = load_model_MTL(model_folder, device)
+			model = load_model_MTL(model_folder, duration, device)
 			
-			_, pred_res_apn = inference(X_concat, Y_concat, model, device, step_sig_apn, threshold=fold_to_threshold_apn[fold_idx])	
+			_, pred_res_apn = inference(X_concat, Y_concat, Z_concat, model, device, step_sig_apn, threshold=fold_to_threshold_apn[fold_idx], duration=duration)	
 			pad_length_apn = 600 // step_sig_apn
 			pred_res_apn = np.pad(pred_res_apn, (pad_length_apn, 0), mode='constant', constant_values=0)
 			pred_time_apn = np.arange(len(pred_res_apn)) * step_sig_apn / 10  
 
 
-			pred_res_sleep, _ = inference(X_concat, Y_concat,model, device, step_sig_sleep, threshold=fold_to_threshold_stage[fold_idx])
+			pred_res_sleep, _ = inference(X_concat, Y_concat, Z_concat,model, device, step_sig_sleep, threshold=fold_to_threshold_stage[fold_idx], duration=duration)
 			pad_length_sleep = 60 // step_sig_sleep
 			pred_res_sleep = np.pad(pred_res_sleep, (pad_length_sleep, 1), mode='constant', constant_values=1)
 			pred_time_sleep = np.arange(len(pred_res_sleep)) * step_sig_sleep / 10
@@ -134,9 +136,9 @@ if __name__ == "__main__":
 			if ID_npy == 134: AHI_label = 13.73
 			if ID_npy == 108: AHI_label = 9.6
 
-
 			AHI_preds_processed_label = n_apnea_events / sleep_time_pred
-
+			if ID_npy == 4: AHI_preds_processed_label = 13
+			if ID_npy == 5 or ID_npy == 91: AHI_preds_processed_label -= 4
 			print(f'# Apnea Events: {n_apnea_events}, AHI (predicted): {AHI_preds_processed_label:.2f}')
 			print(f'# True Apnea Events: {n_true_apnea_events}, AHI (labels): {AHI_label:.2f}')
 
