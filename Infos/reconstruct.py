@@ -158,15 +158,17 @@ if __name__ == "__main__":
 	
 	time = np.arange(0, len(Y)) / fs
 	row = 3
+	from scipy.signal import medfilt
+	X = medfilt(X, kernel_size=11)
 
 	fig, axes = plt.subplots(row, 1, figsize=(15, 2.35 *  row), sharex=True)
-	axes[0].plot(time, normalize_1d(X), label='X (norm)')
-	axes[0].plot(time, signal_process(X), label='X (filt)')
-	axes[1].plot(time, normalize_1d(Y), label='Y (norm)')
-	axes[1].plot(time, signal_process(Y), label='Y (filt)')
+	axes[0].plot(time, normalize_1d(X), label='X (norm)', alpha=0.5)
+	axes[0].plot(time, signal_process(X), label='X (filt)', linewidth=2)
+	axes[1].plot(time, normalize_1d(Y), label='Y (norm)', alpha=0.5)
+	axes[1].plot(time, signal_process(Y), label='Y (filt)', linewidth=2)
 
-	axes[2].plot(time, normalize_1d(Effort_THO), label='Thoracic')
-	axes[2].plot(time, normalize_1d(Effort_ABD), label='Abdominal')
+	axes[2].plot(time, normalize_1d(Effort_THO), label='Thoracic', linewidth=2)
+	axes[2].plot(time, normalize_1d(Effort_ABD), label='Abdominal', linewidth=2)
 	
 	for i in range(row):
 		axes[i].legend(loc='upper right')
@@ -180,7 +182,7 @@ if __name__ == "__main__":
 		ax.set_title(title, fontsize=16)
 	plt.xlabel('Time [sec]')
 	plt.tight_layout()
-	plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Infos/figs/{ID}_data_2.png', bbox_inches='tight', dpi=300)
+	plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Infos/figs_new/rec_exp_mildfilter.png', bbox_inches='tight', dpi=300)
 	plt.close()
 
 	# RERAs, _ = read_influx(influx_vitals_sleep, unit=MAC,

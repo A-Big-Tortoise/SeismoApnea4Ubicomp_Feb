@@ -83,8 +83,6 @@ def read_influx(influx, unit, table_name, data_name, start_timestamp, end_timest
 
 
 if __name__ == "__main__":
-	# normal = 'https://sensorserver.engr.uga.edu:3000/d/BSGRS3dRoom3/sleep-lab-tri-axis-monitoring-room-3?orgId=1&var-mac=b8:27:eb:c2:a0:f9&var-name=vitalsigns&from=1747632328697&to=1747632427921'
-
 	csa_urls = [	
 			'https://sensorserver.engr.uga.edu:3000/d/BSGRS3dRoom1/sleep-lab-tri-axis-monitoring-room-1?orgId=1&var-mac=b8:27:eb:1f:c1:84&var-name=vitalsigns&from=1753675551523&to=1753675686395',		
 	]

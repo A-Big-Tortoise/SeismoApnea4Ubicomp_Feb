@@ -85,17 +85,16 @@ def plot_example(X, Y, Z, Effort_THO, Effort_ABD, Flow, Events, TYPE):
 	row = 5
 
 	fig, axes = plt.subplots(row, 1, figsize=(12, 2.35 *  row), sharex=True)
-	axes[0].plot(time, normalize_1d(X), label='X (norm)')
-	axes[0].plot(time, signal_process(X), label='X (filt)')
-	axes[1].plot(time, normalize_1d(Y), label='Y (norm)')
-	axes[1].plot(time, signal_process(Y), label='Y (filt)')
-	axes[2].plot(time, normalize_1d(Z), label='Z (norm)')
-	axes[2].plot(time, signal_process(Z), label='Z (filt)')
+	axes[0].plot(time, normalize_1d(X), label='X (norm)', alpha=0.5)
+	axes[0].plot(time, signal_process(X), label='X (filt)', linewidth=2)
+	axes[1].plot(time, normalize_1d(Y), label='Y (norm)', alpha=0.5)
+	axes[1].plot(time, signal_process(Y), label='Y (filt)', linewidth=2)
+	axes[2].plot(time, normalize_1d(Z), label='Z (norm)', alpha=0.5)
+	axes[2].plot(time, signal_process(Z), label='Z (filt)', linewidth=2)
+	axes[3].plot(time, normalize_1d(Effort_THO), label='Thoracic', linewidth=2)
+	axes[3].plot(time, normalize_1d(Effort_ABD), label='Abdominal', linewidth=2)
 
-	axes[3].plot(time, normalize_1d(Effort_THO), label='Thoracic')
-	axes[3].plot(time, normalize_1d(Effort_ABD), label='Abdominal')
-
-	axes[4].plot(time, normalize_1d(Flow), label='Airflow')
+	axes[4].plot(time, normalize_1d(Flow), label='Airflow', linewidth=2)
 
 	time_event = np.arange(0, len(Events)) / 100 * 10
 	Events = np.asarray(Events).squeeze()
@@ -123,7 +122,7 @@ def plot_example(X, Y, Z, Effort_THO, Effort_ABD, Flow, Events, TYPE):
 		ax.set_title(title, fontsize=16)
 	plt.xlabel('Time [sec]')
 	plt.tight_layout()
-	plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Infos/figs_true/{TYPE}_exp.png', bbox_inches='tight', dpi=300)
+	plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Infos/figs_new/{TYPE}_exp.png', bbox_inches='tight', dpi=300)
 	plt.close()
 
 

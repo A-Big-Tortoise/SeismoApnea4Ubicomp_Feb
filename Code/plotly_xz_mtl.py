@@ -408,7 +408,7 @@ def process_allnight_data(data, duration=60, overlap=30, denoising=False):
 	
 	concatenate = resample_poly(concatenated, 1, 10)
 	concatenate = normalize_1d(concatenate)
-	return concatenate, np.arange(len(concatenate)) / (sampling_rate/10)
+	return concatenate, np.arange(len(concatenate)) / (sampling_rate/10 * 3600)
 
 
 def count_continuous_ones(signal):
