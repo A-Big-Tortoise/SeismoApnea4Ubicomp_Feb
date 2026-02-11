@@ -21,13 +21,14 @@ plt.rcParams.update({
 		# 'font.family': 'Times New Roman',   # 字体
 		'font.serif': ['Times New Roman', 'Times', 'DejaVu Serif'],
 
-		'font.size': 18,                    # 默认字体大小
-		'axes.titlesize': 20,               # 子图标题
-		'axes.labelsize': 18,               # x/y 轴标签
-		'xtick.labelsize': 16,              # x 轴刻度
-		'ytick.labelsize': 16,              # y 轴刻度
-		'legend.fontsize': 16,              # 图例
+		'font.size': 20,                    # 默认字体大小
+		'axes.titlesize': 24,               # 子图标题
+		'axes.labelsize': 22,               # x/y 轴标签
+		'xtick.labelsize': 20,              # x 轴刻度
+		'ytick.labelsize': 20,              # y 轴刻度
+		'legend.fontsize': 20,              # 图例
 	})
+
 
 if __name__ == "__main__":
 	data_folder = 'Data/data_60s_30s_yingjian2/'
@@ -186,37 +187,354 @@ if __name__ == "__main__":
 		
 		
 		
-		row = 3
-		fig, axes = plt.subplots(row, 1, figsize=(15, 2.5 *  row), sharex=True)
-		axes[0].plot(time_xyz, normalize_1d(X_concat), label='X (norm)', linewidth=3)
-		axes[0].plot(time_xyz, normalize_1d(Y_concat), label='Y (norm)', linewidth=3)
-		axes[0].plot(time_xyz, normalize_1d(Z_concat), label='Z (norm)', linewidth=3)
-		axes[0].legend(loc='upper right')
-		axes[0].set_title(f'AHI [Predictions]: {AHI_preds_processed_label:.2f}, AHI [Labels]: {AHI_label:.2f}')
+		# row = 3
+		# fig, axes = plt.subplots(row, 1, figsize=(15, 2.5 *  row), sharex=True)
+		# axes[0].plot(time_xyz, normalize_1d(X_concat), label='X (norm)', linewidth=3)
+		# axes[0].plot(time_xyz, normalize_1d(Y_concat), label='Y (norm)', linewidth=3)
+		# axes[0].plot(time_xyz, normalize_1d(Z_concat), label='Z (norm)', linewidth=3)
+		# axes[0].legend(loc='upper right')
+		# axes[0].set_title(f'AHI [Predictions]: {AHI_preds_processed_label:.2f}, AHI [Labels]: {AHI_label:.2f}')
 
-		axes[1].plot(time_sleep, SleepStage_concat, label='Sleep Stage', linewidth=2)
-		axes[1].plot(time_event, Event_concat, label='Apnea Events', linewidth=2)
-		axes[1].legend(loc='upper right')
-		axes[1].set_title('Ground Truth')
-		axes[1].set_yticks([0, 1])
-		axes[1].set_yticklabels(['0', '1'])
-		axes[1].set_ylabel('Binary State')
-		axes[1].set_title(
-			'Ground Truth (Sleep: 0=Sleep, 1=Wake; Apnea: 0=Normal, 1=Apnea)'
-		)
+		# axes[1].plot(time_sleep, SleepStage_concat, label='Sleep Stage', linewidth=2)
+		# axes[1].plot(time_event, Event_concat, label='Apnea Events', linewidth=2)
+		# axes[1].legend(loc='upper right')
+		# axes[1].set_title('Ground Truth')
+		# axes[1].set_yticks([0, 1])
+		# axes[1].set_yticklabels(['0', '1'])
+		# axes[1].set_ylabel('Binary State')
+		# axes[1].set_title(
+		# 	'Ground Truth (Sleep: 0=Sleep, 1=Wake; Apnea: 0=Normal, 1=Apnea)'
+		# )
 
-		axes[2].plot(pred_time_sleep, pred_res_sleep, label='Predicted Sleep Stage', linewidth=2)
-		axes[2].plot(pred_time_apn, pred_res_processed, label='Predicted Apnea Events', linewidth=2)
-		axes[2].legend(loc='upper right')
-		axes[2].set_title('Predictions')
-		axes[2].set_yticks([0, 1])
-		axes[2].set_yticklabels(['0', '1'])
-		axes[2].set_ylabel('Binary State')
-		axes[2].set_title(
-			'Predictions (Sleep: 0=Sleep, 1=Wake; Apnea: 0=Normal, 1=Apnea)'
-		)
+		# axes[2].plot(pred_time_sleep, pred_res_sleep, label='Predicted Sleep Stage', linewidth=2)
+		# axes[2].plot(pred_time_apn, pred_res_processed, label='Predicted Apnea Events', linewidth=2)
+		# axes[2].legend(loc='upper right')
+		# axes[2].set_title('Predictions')
+		# axes[2].set_yticks([0, 1])
+		# axes[2].set_yticklabels(['0', '1'])
+		# axes[2].set_ylabel('Binary State')
+		# axes[2].set_title(
+		# 	'Predictions (Sleep: 0=Sleep, 1=Wake; Apnea: 0=Normal, 1=Apnea)'
+		# )
 
-		axes[2].set_xlabel('Time [hours]')
-		plt.tight_layout()
-		plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Main/figs_overnight_good2/Patient_{ID_npy}.png', dpi=300)
+		# axes[2].set_xlabel('Time [hours]')
+		# plt.tight_layout()
+		# plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Main/figs_overnight_final/Patient_{ID_npy}.png', dpi=300)
 		
+
+
+		# plt.figure(figsize=(12, 2))
+		# plt.plot(time_xyz, normalize_1d(X_concat), linewidth=5)
+		# plt.axis('off')
+		# plt.margins(0)
+		# plt.tight_layout(pad=0)
+		# plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Main/figs_overnight_illustrate/Patient_{ID_npy}_X.png', bbox_inches='tight', dpi=300)
+
+		# plt.figure(figsize=(12, 2))
+		# plt.plot(time_xyz, normalize_1d(Y_concat), linewidth=5)
+		# plt.axis('off')
+		# plt.tight_layout(pad=0)
+		# plt.margins(0)
+		# plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Main/figs_overnight_illustrate/Patient_{ID_npy}_Y.png', bbox_inches='tight', dpi=300)
+		
+		# plt.figure(figsize=(12, 2))
+		# plt.plot(time_xyz, normalize_1d(Z_concat), linewidth=5)
+		# plt.axis('off')
+		# plt.tight_layout(pad=0)
+		# plt.margins(0)
+		# plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Main/figs_overnight_illustrate/Patient_{ID_npy}_Z.png', bbox_inches='tight', dpi=300)
+		
+
+		# plt.figure(figsize=(12, 2))
+		# plt.plot(pred_time_sleep, pred_res_sleep, linewidth=5, color='orange')
+		# plt.axis('off')
+		# plt.tight_layout(pad=0)
+		# plt.margins(0)
+		# plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Main/figs_overnight_illustrate/Patient_{ID_npy}_SleepStage.png', bbox_inches='tight', dpi=300)
+		
+
+		# plt.figure(figsize=(12, 2))
+		# plt.plot(pred_time_apn, pred_res_processed, linewidth=5, color='red')
+		# plt.axis('off')
+		# plt.tight_layout(pad=0)
+		# plt.margins(0)
+		# plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Main/figs_overnight_illustrate/Patient_{ID_npy}_SleepApnea.png', bbox_inches='tight', dpi=300)
+		
+
+				
+		# row = 3
+		# lw = 3
+		# fig, axes = plt.subplots(row, 1, figsize=(17.5, 3 * row), sharex=True)
+
+		# # =======================
+		# # Subplot 0
+		# # =======================
+		# axes[0].plot(time_xyz, normalize_1d(X_concat), label='X (norm)', linewidth=lw)
+		# axes[0].plot(time_xyz, normalize_1d(Y_concat), label='Y (norm)', linewidth=lw)
+		# axes[0].plot(time_xyz, normalize_1d(Z_concat), label='Z (norm)', linewidth=lw)
+		# axes[0].legend(loc='upper right')
+		# axes[0].set_title(
+		# 	f'AHI [Predictions]: {AHI_preds_processed_label:.2f}, '
+		# 	f'AHI [Labels]: {AHI_label:.2f}'
+		# )
+
+		# # =======================
+		# # Subplot 1 (Ground Truth)
+		# # =======================
+		# axes[1].plot(time_sleep, SleepStage_concat, label='Sleep Stage', linewidth=lw)
+		# axes[1].plot(time_event, Event_concat, label='Apnea Events', linewidth=lw)
+		# axes[1].legend(loc='upper right')
+
+		# axes[1].set_title('Ground Truth from Polysomnography(PSG)')
+		# # axes[1].set_ylabel('Binary State')
+
+		# # =======================
+		# # Subplot 2 (Predictions)
+		# # =======================
+		# axes[2].plot(pred_time_sleep, pred_res_sleep,
+		# 			label='Sleep Stage', linewidth=lw)
+		# axes[2].plot(pred_time_apn, pred_res_processed,
+		# 			label='Apnea Events', linewidth=lw)
+		# axes[2].legend(loc='upper right')
+
+		# axes[2].set_title('Predictions of SeismoApnea')
+		# # axes[2].set_ylabel('Binary State')
+		# axes[2].set_xlabel('Time [hours]')
+
+		# # =======================
+		# # Colored Y-axis labels
+		# # =======================
+
+		# # Get colors from subplot 1
+		# sleep_color = axes[1].lines[0].get_color()
+		# apnea_color = axes[1].lines[1].get_color()
+
+		# for ax in [axes[1], axes[2]]:
+		# 	# ax.set_yticks([0, 1])
+		# 	ax.set_yticklabels([])
+
+
+		# 	upper_adjust = 0.05
+		# 	lower_adjust = 0.05
+		# 	# 上方：Wake
+		# 	ax.text(-0.05, 1.1 - upper_adjust, 'Wake',
+		# 			transform=ax.transAxes,
+		# 			ha='center', va='center', color='tab:blue')
+		# 	# 中间分隔线
+		# 	# ax.text(-0.05, 1 - upper_adjust, '—---',
+		# 	# 		transform=ax.transAxes,
+		# 	# 		ha='center', va='center')
+		# 	x0, x1 = -0.075, -0.025     # 线段长度：你可以调更长/更短
+		# 	lw_sep = 1.0                # 线宽
+		# 	y_sep_top = 1.0 - upper_adjust
+		# 	ax.plot([x0, x1], [y_sep_top, y_sep_top],
+		# 			transform=ax.transAxes, linewidth=lw_sep,
+		# 			solid_capstyle='round', clip_on=False, color='k')
+		# 	# 下方：Apnea
+		# 	ax.text(-0.05, 0.9 - upper_adjust, 'Apnea',
+		# 			transform=ax.transAxes,
+		# 			ha='center', va='center', color='tab:orange')
+		
+
+		# 	ax.text(-0.05, 0.1+lower_adjust, 'Sleep',
+		# 			transform=ax.transAxes,
+		# 			ha='center', va='center', color='tab:blue')
+			
+
+		# 	# ====== 分隔线（Sleep / Normal）======
+		# 	y_sep_bottom = 0.0 + lower_adjust
+		# 	ax.plot([-0.075, -0.025], [y_sep_bottom, y_sep_bottom],
+		# 			transform=ax.transAxes,
+		# 			linewidth=1.0,
+		# 			solid_capstyle='round',
+		# 			clip_on=False,
+		# 			color='k')
+
+		# 	ax.text(-0.05, -0.1+lower_adjust, 'Normal',
+		# 			transform=ax.transAxes,
+		# 			ha='center', va='center', color='tab:orange')
+			
+		# plt.tight_layout()
+		# plt.savefig(
+		# 	f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Main/figs_overnight_final/Patient_{ID_npy}.png',
+		# 	dpi=300
+		# )
+		# plt.close()
+
+
+
+
+
+
+		# row = 2
+		# lw = 3
+		# fig, axes = plt.subplots(row, 1, figsize=(17.5, 4 * row), sharex=True)
+		# fig.suptitle(
+		# 	f'AHI [Prediction]: {AHI_preds_processed_label:.2f}  |  '
+		# 	f'AHI [Label]: {AHI_label:.2f}',
+		# 	fontsize=26,
+		# 	y=0.95
+		# )
+
+		# # =======================
+		# # Subplot 1 (Ground Truth)
+		# # =======================
+		# axes[0].plot(time_sleep, SleepStage_concat, label='Sleep Stage', linewidth=lw)
+		# axes[0].plot(time_event, Event_concat, label='Apnea Events', linewidth=lw)
+		# axes[0].legend(loc='upper right')
+
+		# axes[0].set_title('Ground Truth from PSG')
+		# # axes[0].set_ylabel('Binary State')
+		# # =======================
+		# # Subplot 2 (Predictions)
+		# # =======================
+		# axes[1].plot(pred_time_sleep, pred_res_sleep,
+		# 			label='Sleep Stage', linewidth=lw)
+		# axes[1].plot(pred_time_apn, pred_res_processed,
+		# 			label='Apnea Events', linewidth=lw)
+		# axes[1].legend(loc='upper right')
+
+		# axes[1].set_title('Predictions of SeismoApnea')
+		# axes[1].set_xlabel('Time [hours]')
+
+		# # =======================
+		# # Colored Y-axis labels
+		# # =======================
+
+		# # Get colors from subplot 1
+		# sleep_color = axes[0].lines[0].get_color()
+		# apnea_color = axes[0].lines[1].get_color()
+
+		# for ax in [axes[0], axes[1]]:
+		# 	# ax.set_yticks([0, 1])
+		# 	ax.set_yticklabels([])
+
+		# 	upper_adjust = 0.05
+		# 	lower_adjust = 0.05
+		# 	# 上方：Wake
+		# 	ax.text(-0.05, 1.1 - upper_adjust, 'Wake',
+		# 			transform=ax.transAxes,
+		# 			ha='center', va='center', color='tab:blue')
+		# 	# 中间分隔线
+		# 	# ax.text(-0.05, 1 - upper_adjust, '—---',
+		# 	# 		transform=ax.transAxes,
+		# 	# 		ha='center', va='center')
+		# 	x0, x1 = -0.075, -0.025     # 线段长度：你可以调更长/更短
+		# 	lw_sep = 1.0                # 线宽
+		# 	y_sep_top = 1.0 - upper_adjust
+		# 	ax.plot([x0, x1], [y_sep_top, y_sep_top],
+		# 			transform=ax.transAxes, linewidth=lw_sep,
+		# 			solid_capstyle='round', clip_on=False, color='k')
+		# 	# 下方：Apnea
+		# 	ax.text(-0.05, 0.9 - upper_adjust, 'Apnea',
+		# 			transform=ax.transAxes,
+		# 			ha='center', va='center', color='tab:orange')
+		
+
+		# 	ax.text(-0.05, 0.1+lower_adjust, 'Sleep',
+		# 			transform=ax.transAxes,
+		# 			ha='center', va='center', color='tab:blue')
+			
+
+		# 	# ====== 分隔线（Sleep / Normal）======
+		# 	y_sep_bottom = 0.0 + lower_adjust
+		# 	ax.plot([-0.075, -0.025], [y_sep_bottom, y_sep_bottom],
+		# 			transform=ax.transAxes,
+		# 			linewidth=1.0,
+		# 			solid_capstyle='round',
+		# 			clip_on=False,
+		# 			color='k')
+
+		# 	ax.text(-0.05, -0.1+lower_adjust, 'Normal',
+		# 			transform=ax.transAxes,
+		# 			ha='center', va='center', color='tab:orange')
+			
+		# plt.tight_layout()
+		# plt.savefig(
+		# 	f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Main/figs_overnight_final/Patient_{ID_npy}.png',
+		# 	dpi=300
+		# )
+		# plt.close()
+
+
+		from matplotlib.colors import ListedColormap
+
+		sleep_cmap = ListedColormap([
+			(0, 0, 0, 0),      # 0 -> transparent
+			(0.12, 0.47, 0.71, 1.0)  # blue
+		])
+
+		apnea_cmap = ListedColormap([
+			(0, 0, 0, 0),      # transparent
+    		(1.0, 0.498, 0.0549, 1.0)   # tab:orange
+		])
+
+		def plot_binary_bar(ax, data, time, cmap, bar_height=5):
+			ax.imshow(
+				data[np.newaxis, :],
+				aspect='auto',
+				interpolation='nearest',
+				# extent=[time[0], time[-1], 0, 1],
+				extent=[time[0], time[-1], 0, bar_height],
+				cmap=cmap,
+				vmin=0, vmax=1
+			)
+			ax.set_yticks([])
+
+
+
+
+		row = 2
+		fig, axes = plt.subplots(row, 1, figsize=(17.5, 3 * row), sharex=True)
+
+		fig.suptitle(
+			f'AHI [Prediction]: {AHI_preds_processed_label:.2f}  |  '
+			f'AHI [Label]: {AHI_label:.2f}',
+			fontsize=26,
+			y=0.95
+		)
+
+
+		from matplotlib.patches import Patch
+
+		legend_elements = [
+			Patch(facecolor=(0.12, 0.47, 0.71, 1.0), label='Wake'),
+			Patch(facecolor=(1.0, 0.498, 0.0549, 1.0), label='Apnea'),
+			Patch(facecolor='white', edgecolor='black', label='Sleep & Normal'),
+		]
+ 
+		# fig.legend(
+		# 	handles=legend_elements,
+		# 	# loc='lower center',
+		# 	loc='upper right',
+		# 	# ncol=3,
+		# 	# fontsize=14,
+		# 	frameon=False,
+		# 	# bbox_to_anchor=(0.5, -0.04)
+		# )
+
+		fig.legend(
+			handles=legend_elements,
+			loc='upper right',
+			fontsize=20,
+			frameon=False,
+			bbox_to_anchor=(0.998, 1.02)
+		)
+
+		plot_binary_bar(axes[0], SleepStage_concat, time_sleep, sleep_cmap)
+		plot_binary_bar(axes[0], Event_concat, time_event, apnea_cmap)
+
+		axes[0].set_title('Ground Truth from PSG')
+
+		plot_binary_bar(axes[1], pred_res_sleep, pred_time_sleep, sleep_cmap)
+		plot_binary_bar(axes[1], pred_res_processed, pred_time_apn, apnea_cmap)
+
+		axes[1].set_title('Predictions of SeismoApnea')
+		axes[1].set_xlabel('Time [hours]')
+
+		plt.tight_layout()
+		plt.savefig(
+			f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Main/figs_overnight_final/Patient_{ID_npy}_bar_new.png',
+			dpi=300
+		)
+		plt.close()

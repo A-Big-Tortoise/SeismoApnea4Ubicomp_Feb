@@ -7,7 +7,7 @@ import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
-from Code.utils_dl import ApneaDataset, ApneaDataset_MTL, BalancedBatchSampler, ApneaDataset_MTL_REC, ApneaDataset_TriClass
+from Code.utils_dl import ApneaDataset, ApneaDataset_MTL, BalancedBatchSampler, ApneaDataset_MTL_REC, ApneaDataset_TriClass, ApneaDataset_yingjian
 from Code.utils_dsp import denoise, denoise_band, normalize, modify_magnitude_with_gaussian_noise, denoise_iter
 from statsmodels.tsa.stattools import acf
 from torch.utils.data import DataLoader
@@ -226,7 +226,8 @@ def load_train_val_test_data(data_path, fold_idx):
 
 def load_train_val_data(data_path, fold_idx):
 	data_files = np.sort(os.listdir(data_path))   
-
+	print(data_files)
+	data_files = [f for f in data_files if f.endswith('.npy')]
 	train_data, val_data = [], []
 	for i in range(len(data_files)):
 		print('Loading data: ', data_files[i])
@@ -242,6 +243,9 @@ def load_train_val_data(data_path, fold_idx):
 	return train_data, val_data
 
 
+
+
+
 def load_val_data(data_path, fold_idx):
 	data_files = np.sort(os.listdir(data_path))   
 
@@ -255,6 +259,48 @@ def load_val_data(data_path, fold_idx):
 	print(f'Loaded Val Data: {val_data.shape}')
 	
 	return val_data
+
+def augmentation_yingjian(Y, Events, others):
+	augmented_Y = []
+	augmented_Events, augmented_Others = [], []
+
+	for i in range(len(Y)):
+		cnt = 0
+
+		if Events[i] != 0: 
+			y_aug = [-Y[i], Y[i, ::-1], -Y[i, ::-1], modify_magnitude_with_gaussian_noise(Y[i])]
+			augmented_Y.extend(y_aug)
+			cnt += 4
+		else:
+			if np.random.rand() < 0.1:
+				y_aug = [-Y[i], Y[i, ::-1], -Y[i, ::-1]]
+				augmented_Y.extend(y_aug)
+				cnt += 3
+			if np.random.rand() < 0.1:
+				y_aug = modify_magnitude_with_gaussian_noise(Y[i])
+				augmented_Y.append(y_aug)
+				cnt += 1
+
+		if Events[i] == 2:
+			for _ in range(15):
+				y_aug = [-Y[i], Y[i, ::-1], -Y[i, ::-1]]
+				augmented_Y.extend(y_aug)
+				cnt += 3
+		# if Events[i] == 1:
+		# 	for _ in range(5):
+		# 		y_aug = [-Y[i], Y[i, ::-1], -Y[i, ::-1]]
+		# 		augmented_Y.extend(y_aug)
+		# 		cnt += 3
+
+		augmented_Events.extend([Events[i]] * cnt)
+		augmented_Others.extend([others[i]] * cnt)
+
+	Y = np.concatenate((Y, np.array(augmented_Y)), axis=0)
+	Events = np.concatenate((Events, np.array(augmented_Events)), axis=0)
+	others = np.concatenate((others, np.array(augmented_Others)), axis=0)
+
+	return Y, Events, others
+
 
 
 
@@ -617,6 +663,36 @@ def remove_sleep_stage(data, sleep_stage_idx, nseg):
 	print(f'Removing {np.sum(~masks)} samples due to Sleep Stage')
 	data = data[masks]
 	return data
+
+
+def data_preprocess_yingjian(data, Type):
+	print('-'*50)
+	print(f'In {Type} ...')
+	Y = data[:, :6000]
+
+	others = data[:, -5:-1]
+	Events = data[:, -1]
+
+	# Events[Events > 0] = 1  # Binary Classification
+
+
+	Y = denoise_iter(Y)
+	Y = resample_poly(Y,1,10,axis=1)
+	Y = Y[:, 5:595]
+	print(f'Downsampled')	
+	Y = normalize(Y)
+	print("Normalization")
+
+	if Type == 'train':
+		Y, Events, others = augmentation_yingjian(Y, Events, others)
+		print(f'After Augmentation, Events_{Type}.shape: ', Events.shape)
+
+	unique_events = np.unique(Events)
+	for i in range(len(unique_events)):
+		print(f'Events_{Type} {unique_events[i]}: ', np.sum(Events == unique_events[i]))
+	
+	return Y, Events, others
+
 
 
 
@@ -1006,6 +1082,40 @@ def npy2dataset(data_path, fold_idx, args, inference=False):
 		val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, drop_last=True)
 
 		return train_loader, val_loader
+
+
+def npy2dataset_yingjian(data_path, fold_idx, args):
+	"""Shape of each batch: [batch_size, channels, seq_len]"""
+	train_data, val_data = load_train_val_data(data_path, fold_idx)
+
+
+	Y_train, Events_train, others_train = data_preprocess_yingjian(train_data, 'train')
+	Y_val, Events_val, others_val = data_preprocess_yingjian(val_data, 'val')
+	print(f'label of train: {np.unique(Events_train)}, label of val: {np.unique(Events_val)}')
+	print(f'Y_train: {Y_train.shape}, Y_val: {Y_val.shape}')
+
+
+	# random_index = np.random.choice(len(Y_train), 20, replace=False)
+	# for idx in random_index:
+	# 	import matplotlib.pyplot as plt
+	# 	plt.figure()
+	# 	plt.plot(Y_train[idx])
+	# 	plt.title(f'Label: {Events_train[idx]}')
+	# 	plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Yingjian/figs/sample_{idx}_label_{Events_train[idx]}.png')
+	# 	plt.close()
+	Signals_train = np.expand_dims(Y_train, axis=-1) 
+	Signals_val = np.expand_dims(Y_val, axis=-1)
+	print(f'Y_train: {Y_train.shape}, Y_val: {Y_val.shape}')
+
+	train_dataset = ApneaDataset_yingjian(Signals_train, Events_train)
+	# train_dataset = ApneaDataset(Signals_train, Events_train)
+	train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False, drop_last=False)
+	val_dataset = ApneaDataset_yingjian(Signals_val, Events_val)
+	val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, drop_last=True)
+
+	return train_loader, val_loader
+
+
 
 
 

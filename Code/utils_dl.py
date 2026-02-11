@@ -50,6 +50,33 @@ class SupConLoss(nn.Module):
         loss = - (self.temperature / self.base_temperature) * mean_log_prob_pos
         return loss.mean()
 
+class ApneaDataset_yingjian(Dataset):
+    def __init__(self, data, labels, others=None):
+        """
+        data: ndarray, shape [N, C, L] or [N, L, C]
+        labels: ndarray/list of 0/1
+        others: optional extra info
+        """
+        # 确保 data shape 为 [N, C, L]
+        data = torch.FloatTensor(data).transpose(1, 2)
+
+        self.data = data
+        self.labels = torch.LongTensor(labels)
+        # self.others = torch.LongTensor(others) if others is not None else None
+        self.others = torch.FloatTensor(others) if others is not None else None
+
+        # 保留 numpy 版本标签，供 Sampler 使用
+        self.labels_np = self.labels.numpy()
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        if self.others is not None:
+            return self.data[idx], self.labels[idx], self.others[idx]
+        else:
+            return self.data[idx], self.labels[idx]
+        
 
 class ApneaDataset(Dataset):
     def __init__(self, data, labels, others=None):
@@ -251,11 +278,19 @@ class FocalLoss(nn.Module):
         self.reduction = reduction
         self.alpha = alpha
         
+        # if alpha is not None:
+        #     if isinstance(alpha, (float, int)):
+        #         self.alpha = torch.Tensor([alpha, 1-alpha])
+        #     elif isinstance(alpha, list):
+        #         self.alpha = torch.Tensor(alpha)
         if alpha is not None:
+            # alpha should be a 1D tensor/list of shape [num_classes]
             if isinstance(alpha, (float, int)):
-                self.alpha = torch.Tensor([alpha, 1-alpha])
-            elif isinstance(alpha, list):
-                self.alpha = torch.Tensor(alpha)
+                raise ValueError("For multi-class, alpha must be a per-class weight vector, not a scalar.")
+            self.alpha = torch.tensor(alpha, dtype=torch.float32) if not torch.is_tensor(alpha) else alpha.float()
+        else:
+            self.alpha = None
+
     
     def forward(self, input, target):
         ce_loss = F.cross_entropy(input, target, reduction='none', weight=self.alpha.to(input.device) if self.alpha is not None else None)
@@ -456,6 +491,140 @@ def find_best_threshold_F1_and_Bacc(y_true, y_prob, num_thresholds=500, average=
 #         "y_pred": y_pred_best  # 新增：最优阈值下的预测结果
 #     }
 
+
+def train_classifier_yingjian(model, train_loader, val_loader, 
+                     optimizer,  device, epochs, save_dir, 
+                     save_bacc, weight_strategy='effective_number', 
+                     scheduler=None, tta_method=None):
+    """
+    Train the classifier with validation and model saving using Focal Loss
+    
+    Args:
+        weight_strategy (str): Strategy for class weights:
+            - 'balanced': inverse frequency weighting
+            - 'equal': equal weights for all classes
+            - 'effective_number': weights based on effective number of samples
+    """
+    os.makedirs(save_dir, exist_ok=True)
+
+    class_weights = compute_class_weights(train_loader, weight_strategy)
+    classification_loss_fn = FocalLoss(alpha=class_weights, gamma=2.0)
+    # classification_loss_fn = nn.CrossEntropyLoss(label_smoothing=0.1)
+    # contrastive_loss_fn = InfoNCELosss(device=device)
+    best_val_bacc = -1
+    for epoch in range(1, epochs + 1):
+        model.train()
+
+        train_preds, train_labels = [], []
+        train_loss, train_loss_cls, train_loss_con = 0, 0, 0
+
+        for batch_idx, (data, labels) in enumerate(train_loader):
+            # print(f'O in labels, 1 in labels: {(labels==0).sum().item()}, {(labels==1).sum().item()}')
+            data, labels = data.to(device), labels.to(device)
+            
+            optimizer.zero_grad()
+            outputs, proj_F, _ = model(data)
+            # print(f'Outputs shape: {outputs.shape}, Labels shape: {labels.shape}')
+            # print(f'Outputs sample: {outputs[0]}, Label sample: {labels[0]}')
+            loss_cls = classification_loss_fn(outputs, labels)    
+            loss = loss_cls
+
+            # print(f'Losses - Classification: {loss_cls.item():.6f}, Contrastive: {loss_supcon.item():.6f}')
+            train_loss += loss.item()
+            
+            loss.backward()
+            optimizer.step()
+            
+            _, predicted = torch.max(outputs.data, 1)
+            # print(f'Predicted sample: {predicted[0]}')
+            train_preds.extend(predicted.cpu().numpy())
+            train_labels.extend(labels.cpu().numpy())
+
+        if scheduler is not None:
+            scheduler.step()
+            last_lrs = scheduler.get_last_lr()
+            # print(f"Current Learning Rate (from scheduler's get_last_lr()): {last_lrs[0]}")
+
+
+        avg_train_loss = train_loss / len(train_loader)
+
+        train_balanced_acc = balanced_accuracy_score(train_labels, train_preds)
+        train_f1 = f1_score(train_labels, train_preds, average='weighted')
+        cm_train = confusion_matrix(train_labels, train_preds)
+        print(f'\nEpoch {epoch} Training Confusion Matrix:')
+        print(cm_train)
+
+        model.eval()
+        val_preds, val_labels = [], []
+        val_probs = []
+        val_loss, val_loss_cls, val_loss_supcon = 0, 0, 0
+        with torch.no_grad():
+            for data, labels in val_loader:
+                data, labels = data.to(device), labels.to(device)
+                if tta_method is not None:
+                    # B, C, T
+                    outputs1, proj_F, _ = model(data)
+                    outputs2, proj_F, _ = model(torch.flip(data, dims=[2]))
+                    outputs3, proj_F, _ = model(-data)
+                    
+
+
+                    loss = classification_loss_fn(outputs1, labels)
+                    if tta_method == 'avg':
+                        outputs = (outputs1 + outputs2 + outputs3) / 3
+                        _, predicted = torch.max(outputs.data, 1)   
+                    if tta_method == 'avgnew':
+                        outputs4, _, _ = model(modify_magnitude_with_gaussian_noise_batch(data))
+                        outputs = (outputs1 + outputs2 + outputs3 + outputs4) / 4
+                        _, predicted = torch.max(outputs.data, 1)
+
+                else:
+                    outputs, proj_F, _ = model(data)
+                    # loss = criterion(outputs, labels)
+                    _, predicted = torch.max(outputs.data, 1)
+
+                    loss_cls = classification_loss_fn(outputs, labels)    
+                    loss = loss_cls
+                    
+                    val_loss += loss.item()
+                    
+                val_preds.extend(predicted.cpu().numpy())
+                val_probs.extend(F.softmax(outputs.data, dim=1).cpu().numpy())
+                val_labels.extend(labels.cpu().numpy())
+        
+        avg_val_loss = val_loss / len(val_loader)
+
+        val_balanced_acc = balanced_accuracy_score(val_labels, val_preds)
+        val_f1 = f1_score(val_labels, val_preds, average='weighted')
+        val_conf_mat = confusion_matrix(val_labels, val_preds)
+
+
+        print(f'\nEpoch {epoch} Results:')
+        print(f'Training - Loss: {avg_train_loss*10000:.4f}, Balanced Acc: {train_balanced_acc:.4f}, F1: {train_f1:.4f}')
+        print(f'Validation - Loss: {avg_val_loss*10000:.4f}, Balanced Acc: {val_balanced_acc:.4f}, F1: {val_f1:.4f}')
+        print('\nValidation Confusion Matrix:')
+        print(val_conf_mat)
+
+
+        if train_balanced_acc < save_bacc: continue
+        if val_balanced_acc > best_val_bacc:
+            print(f'✅ Best model found at epoch {epoch} with Balanced Acc: {val_balanced_acc:.4f}, F1: {val_f1:.4f}')
+            print('----------------------------------------')
+            # print(f'confusion matrix:\n{val_conf_mat}')
+
+            best_val_bacc = val_balanced_acc    
+            best_val_f1 = val_f1
+
+            model_name = f'epoch{epoch}_{int(val_balanced_acc*100)}_{int(val_f1*100)}.pth'
+            latest_model_path = os.path.join(save_dir, model_name)
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'val_balanced_acc': val_balanced_acc,
+                'val_f1': val_f1,
+                'val_cm': val_conf_mat
+            }, latest_model_path)
 
 
 

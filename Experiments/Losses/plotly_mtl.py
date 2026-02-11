@@ -90,6 +90,7 @@ if __name__ == "__main__":
 		model = load_model_MTL(model_folder, duration, device, axis=len(XYZ))
 		
 		_, pred_res_apn = inference(X_concat, Y_concat, Z_concat, model, device, step_sig_apn, threshold=fold_to_threshold_apn[fold_idx], duration=duration, XY=XYZ)	
+		
 		pad_length_apn = 600 // step_sig_apn
 		pred_res_apn = np.pad(pred_res_apn, (pad_length_apn, 0), mode='constant', constant_values=0)
 		pred_time_apn = np.arange(len(pred_res_apn)) * step_sig_apn / 10  
