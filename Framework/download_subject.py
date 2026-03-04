@@ -167,69 +167,22 @@ if __name__ == "__main__":
 
 
 
-	pred_stage_lst = [1] * 60
-	pred_apnea_lst = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-	print('Initial pred_stage_lst: ', pred_stage_lst)
-	filtered_apnea_lst = []
-	filtered_stage_lst = []
-
 	for subject, (start_time, end_time) in data_dict.items():
 		start_time, end_time = start_time / 1000, end_time / 1000
-
-		while start_time - 60 < end_time:
-			json_body = []
-
-			rr_start_time = start_time - seg_duration_rr*1.01
-			raw_Z_rr, _ = read_influx(influx_vitals_bsg, unit=mac, 
-								table_name='Z', data_name="value",
-								start_timestamp=rr_start_time, 
-								end_timestamp=start_time)
-			raw_Y_rr, _ = read_influx(influx_vitals_bsg, unit=mac, 
-								table_name='Y', data_name="value",
-								start_timestamp=rr_start_time, 
-								end_timestamp=start_time)
-			
-			raw_X_rr, _ = read_influx(influx_vitals_bsg, unit=mac, 
-								table_name='X', data_name="value",
-								start_timestamp=rr_start_time, 
-								end_timestamp=start_time)
-
-			if len(raw_Z_rr) < 100*seg_duration_rr: 
-				start_time += step
-				continue
-			
-
-			def preprocess(raw_signal, seg_duration):
-				signal = np.array(raw_signal[-100*seg_duration:])
-				signal = low_pass_filter(signal, Fs=100, low=0.8, order=3)
-				signal = resample_poly(signal,1,10)
-				signal = signal[5:595]
-				signal = (signal - np.mean(signal)) / np.std(signal)
-				return signal
-			X = preprocess(raw_X_rr, seg_duration_rr)
-			Y = preprocess(raw_Y_rr, seg_duration_rr)		
-			XY = np.stack([X, Y], axis=0)[np.newaxis, :, :]
-			
-			
-			pred_stages = []
-			pred_apneas = []
-			for fold_idx in range(1, 5):
-				model = models[fold_idx-1]
-				fold_idx = str(fold_idx)
-				pred_stage, pred_apnea = inference(XY, model, device, threshold_stage=threshold_stages[fold_idx], threshold_apnea=threshold_apneas[fold_idx])	
-				print(f'Fold {fold_idx}, Predicted Stage: {pred_stage}, Predicted Apnea: {pred_apnea}')
-				pred_stages.append(pred_stage)
-				pred_apneas.append(pred_apnea)
-
-			
-			pred_stage_final = int(0) if np.sum(np.array(pred_stages)) < 2 else int(1)
-			pred_apnea_final = int(1) if np.sum(np.array(pred_apneas)) >= 3 else int(0)
-			pred_apnea_final = int(0) if pred_stage_final == 1 else pred_apnea_final
-			print(f'Final Predicted Stage: {pred_stage_final}, Final Predicted Apnea: {pred_apnea_final}')
-			
-			pred_stage_lst.append(pred_stage_final)
-			pred_apnea_lst.append(pred_apnea_final)
-			filtered_stage_lst.append(np.median(np.array(pred_stage_lst[-60:])).astype(int))
-			filtered_apnea_lst.append(np.median(np.array(pred_apnea_lst[-10:])).astype(int))
-
-			start_time += step
+		print(f"Subject: {subject}, start_time: {start_time}, end_time: {end_time}")
+		raw_Z_rr, _ = read_influx(influx_vitals_bsg, unit=mac, 
+							table_name='Z', data_name="value",
+							start_timestamp=start_time, 
+							end_timestamp=end_time)
+		raw_Y_rr, _ = read_influx(influx_vitals_bsg, unit=mac, 
+							table_name='Y', data_name="value",
+							start_timestamp=start_time, 
+							end_timestamp=end_time)
+		raw_X_rr, _ = read_influx(influx_vitals_bsg, unit=mac, 
+							table_name='X', data_name="value",
+							start_timestamp=start_time, 
+							end_timestamp=end_time)
+		print(f"Subject: {subject}, raw_X_rr length: {len(raw_X_rr)}, raw_Y_rr length: {len(raw_Y_rr)}, raw_Z_rr length: {len(raw_Z_rr)}")
+		raw_arr = np.stack([raw_X_rr, raw_Y_rr, raw_Z_rr], axis=0)
+		print(f"raw_arr shape: {raw_arr.shape}")
+		np.save(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Framework/data/{subject}_raw_XYZ.npy', raw_arr)

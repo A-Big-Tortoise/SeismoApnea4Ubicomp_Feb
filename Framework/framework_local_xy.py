@@ -15,6 +15,7 @@ sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 from Code.plotly_xz_mtl import load_model_MTL
 import torch
 import yaml
+import matplotlib.pyplot as plt
 
 
 def low_pass_filter(data, Fs, low, order):
@@ -42,44 +43,7 @@ def normalize(data):
 	return data
 
 
-def read_influx(influx, unit, table_name, data_name, start_timestamp, end_timestamp):
-	if influx['ip'] == '127.0.0.1' or influx['ip'] == 'localhost':
-		client = InfluxDBClient(influx['ip'], '8086', influx['user'], influx['passw'], influx['db'],  ssl=influx['ssl'])
-	else:
-		client = InfluxDBClient(influx['ip'].split('//')[1], '8086', influx['user'], influx['passw'], influx['db'],  ssl=influx['ssl'])
-	query = 'SELECT "' + data_name + '" FROM "' + table_name + '" WHERE "location" = \''+unit+'\' AND time >= '+ str(int(start_timestamp*10e8))+' AND time < '+str(int(end_timestamp*10e8))
-	result = client.query(query)
-	points = list(result.get_points())
-	values =  list(map(operator.itemgetter(data_name), points))
-	times  =  list(map(operator.itemgetter('time'),  points))
-	data = np.array(values)
-	return data, times
 
-
-def connect_influxdb(influxdb_conf):
-	url_str = influxdb_conf["ip"].split("://")
-	if len(url_str) >= 2:
-		ssl_val = True if url_str[0] == "https" else False
-		url_ip = url_str[1]
-	else:
-		ssl_val = True
-		url_ip = url_str[0]
-	# print(f'url_ip: {url_ip}')
-	verify = False
-
-	influxdb_client = InfluxDBClient(url_ip, influxdb_conf["port"], influxdb_conf["user"], influxdb_conf["password"],
-									 influxdb_conf["db"], ssl=ssl_val, verify_ssl=verify)
-
-	try:
-		if influxdb_client.ping():
-			print(f"Successfully connected to the Influxdb! {url_ip}")
-		else:
-			print(f"Failed to connect to the Influxdb {url_ip} , exit")
-			exit(1)
-	except Exception as e:
-		print(f"Ping failure, Connection to the Influxdb {url_ip} failed!, exit")
-		exit(1)
-	return influxdb_client
 
 
 def convert_ms_timestamp_to_ny_datetime(timestamp_ms):
@@ -124,34 +88,29 @@ def load_configs(config_path):
 	return fold2id, fold2threshold_stage, fold2threshold_apnea
 
 
+def preprocess(raw_signal, seg_duration):
+	signal = np.array(raw_signal[-100*seg_duration:])
+	signal = low_pass_filter(signal, Fs=100, low=0.8, order=3)
+	signal = resample_poly(signal,1,10)
+	signal = signal[5:595]
+	signal = (signal - np.mean(signal)) / np.std(signal)
+	return signal
+
 
 if __name__ == "__main__":
-
-	influx_vitals_bsg = {'ip': 'https://sensorserver.engr.uga.edu', 'db': 'shake', 'user': 'algtest', 'passw': 'sensorweb711', 'ssl': True}
-
-	seg_duration_rr = 60
+	# seg_duration_rr = 60
 	step = 1
-
-	mac = 'b8:27:eb:ec:64:08'
-
-	dest = {'ip': 'sensorserver.engr.uga.edu', 'port': 8086, 'db': 'healthresult', 'user': 'algtest', 'password': 'sensorweb711'}
-	dest_client = connect_influxdb(dest)
-
-
-
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 	
-	models = []
-	for i in range(1, 5):
-		model_folder = f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Losses/Models/MTL_ws1_wa1/fold{i}/PatchTST_patchlen24_nlayer4_dmodel64_nhead4_dff256/'
-		model = load_model_MTL(model_folder, seg_duration_rr, device, axis=2)
-		models.append(model)
-	print('len(models): ', len(models))
-	config_path = f"/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Losses/configs/MTL_ws1_wa1.yaml"
-	fold2id, threshold_stages, threshold_apneas = load_configs(config_path)
+	# models = []
+	# for i in range(1, 5):
+	# 	model_folder = f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Losses/Models/MTL_ws1_wa1/fold{i}/PatchTST_patchlen24_nlayer4_dmodel64_nhead4_dff256/'
+	# 	model = load_model_MTL(model_folder, seg_duration_rr, device, axis=2)
+	# 	models.append(model)
 
-
-
+	# print('len(models): ', len(models))
+	# config_path = f"/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Losses/configs/MTL_ws1_wa1.yaml"
+	# fold2id, threshold_stages, threshold_apneas = load_configs(config_path)
 
 	data_dict = {
 			"Jiayu": (1770321733633, 1770321878664),
@@ -159,77 +118,78 @@ if __name__ == "__main__":
 			"Yida": (1770322576738, 1770322874030)
 			# "Zixuan": ()     
 		}
-	# Zixuan
 
-	# # Sahas
-	# start_time = 1770322977722 / 1000
-	# end_time = 1770323204088 / 1000
+	# pred_stage_lst = [1] * 60
+	# pred_apnea_lst = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	# print('Initial pred_stage_lst: ', pred_stage_lst)
+	# filtered_apnea_lst = []
+	# filtered_stage_lst = []
 
+	apnea_window = 45
+	for subject in data_dict.keys():
+		data = np.load(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Framework/data/{subject}_raw_XYZ.npy')
+		print(f'{subject} data shape: {data.shape}')
 
-
-	pred_stage_lst = [1] * 60
-	pred_apnea_lst = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-	print('Initial pred_stage_lst: ', pred_stage_lst)
-	filtered_apnea_lst = []
-	filtered_stage_lst = []
-
-	for subject, (start_time, end_time) in data_dict.items():
-		start_time, end_time = start_time / 1000, end_time / 1000
-
-		while start_time - 60 < end_time:
-			json_body = []
-
-			rr_start_time = start_time - seg_duration_rr*1.01
-			raw_Z_rr, _ = read_influx(influx_vitals_bsg, unit=mac, 
-								table_name='Z', data_name="value",
-								start_timestamp=rr_start_time, 
-								end_timestamp=start_time)
-			raw_Y_rr, _ = read_influx(influx_vitals_bsg, unit=mac, 
-								table_name='Y', data_name="value",
-								start_timestamp=rr_start_time, 
-								end_timestamp=start_time)
-			
-			raw_X_rr, _ = read_influx(influx_vitals_bsg, unit=mac, 
-								table_name='X', data_name="value",
-								start_timestamp=rr_start_time, 
-								end_timestamp=start_time)
-
-			if len(raw_Z_rr) < 100*seg_duration_rr: 
-				start_time += step
-				continue
-			
-
-			def preprocess(raw_signal, seg_duration):
-				signal = np.array(raw_signal[-100*seg_duration:])
-				signal = low_pass_filter(signal, Fs=100, low=0.8, order=3)
-				signal = resample_poly(signal,1,10)
-				signal = signal[5:595]
-				signal = (signal - np.mean(signal)) / np.std(signal)
-				return signal
-			X = preprocess(raw_X_rr, seg_duration_rr)
-			Y = preprocess(raw_Y_rr, seg_duration_rr)		
+		X_raw, Y_raw, Z_raw = data[0], data[1], data[2]
+		pred_apnea_lst = [0] * (apnea_window-1) 
+		for i in range(0, len(Z_raw)-apnea_window*100, 100):
+			X = preprocess(X_raw[i:i+apnea_window*100], apnea_window)
+			Y = preprocess(Y_raw[i:i+apnea_window*100], apnea_window)		
+			Z = preprocess(Z_raw[i:i+apnea_window*100], apnea_window)
 			XY = np.stack([X, Y], axis=0)[np.newaxis, :, :]
 			
-			
-			pred_stages = []
-			pred_apneas = []
-			for fold_idx in range(1, 5):
-				model = models[fold_idx-1]
-				fold_idx = str(fold_idx)
-				pred_stage, pred_apnea = inference(XY, model, device, threshold_stage=threshold_stages[fold_idx], threshold_apnea=threshold_apneas[fold_idx])	
-				print(f'Fold {fold_idx}, Predicted Stage: {pred_stage}, Predicted Apnea: {pred_apnea}')
-				pred_stages.append(pred_stage)
-				pred_apneas.append(pred_apnea)
+			stds_y = []
+			for j in range(0, len(Y)-70, 10):
+				stds_y.append(np.std(Y[j:j+70]))
+			min_std_y = min(stds_y)
+			median_std_y = np.median(stds_y)
+			ratio_std_y = median_std_y / min_std_y
+
+			if ratio_std_y > 5: pred_apnea_lst.append(1)
+			else: pred_apnea_lst.append(0)
+		
+
+			# fig, axes = plt.subplots(3, 1, figsize=(10, 6))
+			# axes[0].plot(X, label='X')
+			# axes[0].legend()
+			# axes[1].plot(Y, label='Y')
+			# axes[1].legend()
+			# axes[2].plot(Z, label='Z')
+			# axes[2].legend()
+			# plt.suptitle(f'{subject}, index:{i}, min_std_y:{min_std_y:.4f}, median_std_y:{median_std_y:.4f}, ratio_std_y:{median_std_y/min_std_y:.2f}')
+			# plt.tight_layout()
+			# plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Framework/figs/{subject}_segment_{i}.png')
+			# plt.close()
+
+		fig, axes = plt.subplots(2, 1, figsize=(10, 5))
+		axes[0].plot(Y_raw, label='Y')
+		axes[0].legend()
+		axes[1].plot(pred_apnea_lst, label='Predicted Apnea')
+		axes[1].legend()
+		plt.suptitle(f'{subject}, Predicted Apnea over Time')
+		plt.tight_layout()
+		plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Framework/res/{subject}_predicted_apnea.png')
+		plt.close()
+
+		# 	pred_stages = []
+		# 	pred_apneas = []
+		# 	for fold_idx in range(1, 5):
+		# 		model = models[fold_idx-1]
+		# 		fold_idx = str(fold_idx)
+		# 		pred_stage, pred_apnea = inference(XY, model, device, threshold_stage=threshold_stages[fold_idx], threshold_apnea=threshold_apneas[fold_idx])	
+		# 		print(f'Fold {fold_idx}, Predicted Stage: {pred_stage}, Predicted Apnea: {pred_apnea}')
+		# 		pred_stages.append(pred_stage)
+		# 		pred_apneas.append(pred_apnea)
 
 			
-			pred_stage_final = int(0) if np.sum(np.array(pred_stages)) < 2 else int(1)
-			pred_apnea_final = int(1) if np.sum(np.array(pred_apneas)) >= 3 else int(0)
-			pred_apnea_final = int(0) if pred_stage_final == 1 else pred_apnea_final
-			print(f'Final Predicted Stage: {pred_stage_final}, Final Predicted Apnea: {pred_apnea_final}')
+		# 	pred_stage_final = int(0) if np.sum(np.array(pred_stages)) < 2 else int(1)
+		# 	pred_apnea_final = int(1) if np.sum(np.array(pred_apneas)) >= 3 else int(0)
+		# 	pred_apnea_final = int(0) if pred_stage_final == 1 else pred_apnea_final
+		# 	print(f'Final Predicted Stage: {pred_stage_final}, Final Predicted Apnea: {pred_apnea_final}')
 			
-			pred_stage_lst.append(pred_stage_final)
-			pred_apnea_lst.append(pred_apnea_final)
-			filtered_stage_lst.append(np.median(np.array(pred_stage_lst[-60:])).astype(int))
-			filtered_apnea_lst.append(np.median(np.array(pred_apnea_lst[-10:])).astype(int))
+		# 	pred_stage_lst.append(pred_stage_final)
+		# 	pred_apnea_lst.append(pred_apnea_final)
+		# 	filtered_stage_lst.append(np.median(np.array(pred_stage_lst[-60:])).astype(int))
+		# 	filtered_apnea_lst.append(np.median(np.array(pred_apnea_lst[-10:])).astype(int))
 
-			start_time += step
+		# 	start_time += step
