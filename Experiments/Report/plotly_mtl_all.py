@@ -454,8 +454,7 @@ if __name__ == "__main__":
 		# ============ Data Check ============
 		
 		if ID_npy not in id2fold: continue
-		# if ID_npy in [50, 25, 108, 134, 120, 153, 119]: continue
-		if ID_npy in [24, 50, 25, 134, 153, 119, 114, 99, 32]: continue
+		# if ID_npy in [24, 50, 25, 134, 153, 119, 114, 99, 32]: continue
 		if not ratio_check_lst(ID_npy): continue
 		sleep_time_excel = df.loc[df['ID'] == ID_npy, 'Duration(h)'].values[0]  * df.loc[df['ID'] == ID_npy, 'SEfficiency'].values[0] * 0.01
 		if sleep_time_excel <= 2:
@@ -546,8 +545,8 @@ if __name__ == "__main__":
 		os.makedirs(os.path.dirname(log_path))
 
 
-	path = f'Experiments/{Experiment}/Models/{model_folder_name}/AHI_{step_sig_apn//10}s_larger2_change106108134_change29_no153119241149932_with108'
-	sleep_path = f'Experiments/{Experiment}/Models/{model_folder_name}/TST_{step_sig_sleep//10}s_larger2_change106108134_change29_no153119241149932_with108'
+	path = f'Experiments/{Experiment}/Models/{model_folder_name}/AHI_{step_sig_apn//10}s_larger2_change106108134_change29'
+	sleep_path = f'Experiments/{Experiment}/Models/{model_folder_name}/TST_{step_sig_sleep//10}s_larger2_change106108134_change29'
 
 
 	AHI_labels, AHI_preds = np.array(AHI_labels), np.array(AHI_preds)	
@@ -602,22 +601,22 @@ if __name__ == "__main__":
 		fig_path=sleep_path+'.png'
 	)
 
-	# compute_segmented_mae_overall(AHI_labels, AHI_preds, TST_labels, TST_preds)
+	compute_segmented_mae_overall(AHI_labels, AHI_preds, TST_labels, TST_preds)
 	compute_cm_metrics(AHI_labels, AHI_preds)
 	data_path = '/home/jiayu/SeismoApnea4Ubicomp_Feb/Experiments/Report/figs/'
 	plot_person_level_results_reg(
 		y_true_list=AHI_labels,
 		y_pred_list=AHI_preds,
-		fig_path=data_path+'overall_apnea_reg_70.png'
+		fig_path=data_path+'overall_apnea_reg_all.png'
 	)	
 	plot_person_level_results_clf(
 		y_true_list=AHI_labels,
 		y_pred_list=AHI_preds,
-		fig_path=data_path+'overall_apnea_clf_70.png'
+		fig_path=data_path+'overall_apnea_clf_all.png'
 	)	
 	plot_person_level_results_sleep(
 		y_true_list=TST_labels,
 		y_pred_list=TST_preds,
 		ahi_label_list=AHI_labels,
-		fig_path=data_path+'overall_sleep_70.png'
+		fig_path=data_path+'overall_sleep_all.png'
 	)

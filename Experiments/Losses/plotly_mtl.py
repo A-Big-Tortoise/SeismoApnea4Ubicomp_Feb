@@ -29,12 +29,13 @@ if __name__ == "__main__":
 
 	id2fold = {}
 
-	step_sig_apn = 140
+	step_sig_apn = 150
 	step_sig_sleep = 10
 	
 	XYZ = 'XY'
 	Experiment = 'Losses'
-	model_folder_name = f'MTL_ws1_wa1'
+	# model_folder_name = f'MTL_ws1_wa1'
+	model_folder_name = f'XY_F1_ws1_wa1_again'
 	# model_folder_name = f'XY_F1_ws1_wa1_was0.001'
 
 	config_path = f"Experiments/{Experiment}/configs/{model_folder_name}.yaml"
