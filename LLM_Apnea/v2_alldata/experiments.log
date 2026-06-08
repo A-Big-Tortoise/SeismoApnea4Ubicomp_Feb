@@ -1,0 +1,23 @@
+# Apnea Analysis — Experiment Log
+# Format: [ID] | [Status] | [bACC] | [F1] | [TP/FP/TN/FN] | [Description]
+
+[EXP-020] | no_change | bACC=0.753 | F1=0.367 | TP=2920 FP=9342 TN=22751 FN=745 | Patience=15, 100 epochs — no improvement, 441s
+[EXP-019] | regressed | bACC=0.749 | F1=0.380 | TP=2743 FP=8048 TN=24045 FN=922 | 6-ch with inst_freq — noisy Hilbert phase hurts, reverted to 4-ch
+[EXP-018] | no_change | bACC=0.752 | F1=0.386 | TP=2738 FP=7782 TN=24311 FN=927 | 4-model (RN×3+TCN) — 3rd ResNet adds noise, reverted to 3-model
+[EXP-017] | improved  | bACC=0.754 | F1=0.367 | TP=2942 FP=9430 TN=22663 FN=723 | 3-model ensemble (RN×2 + TCN) + TTA(5) + stage-specific thr — sens=80.3%, spec=70.6%
+[EXP-016] | improved  | bACC=0.747 | F1=0.361 | TP=2889 FP=9473 TN=22620 FN=776 | TTA(5) + channel swap aug — sens=78.8%, spec=70.5%
+[EXP-015] | regressed | bACC=0.735 | F1=0.376 | TP=2580 FP=7496 TN=24597 FN=1085 | 16-dim stage embedding — worse than binary scalar, reverted
+[EXP-014] | improved  | bACC=0.741 | F1=0.360 | TP=2810 FP=9131 TN=22962 FN=855 | Stage-specific thresholds (0.45/0.47) — marginal gain; sens=76.7%, spec=71.5%
+[EXP-013] | improved  | bACC=0.738 | F1=0.371 | TP=2660 FP=8007 TN=24086 FN=1005 | Ensemble+stage_label side input — big jump, spec=75.1%; 266s runtime
+[EXP-012] | improved  | bACC=0.716 | F1=0.328 | TP=2794 FP=10594 TN=21499 FN=871 | Ensemble ResNet+TCN avg — spec=67.0%, FP reduced; 215s runtime
+[EXP-011] | improved  | bACC=0.715 | F1=0.321 | TP=2866 FP=11315 TN=20778 FN=799 | Dilated TCN (hidden=128, dilation 1-32, kernel=5) — spec=64.7%, best so far; 200s runtime
+[EXP-010] | no_change | bACC=0.711 | F1=0.309 | TP=2998 FP=12716 TN=19377 FN=667 | Mixup(α=0.4) + warmup-cosine — no improvement over EXP-007
+[EXP-009] | regressed | bACC=0.697 | F1=0.300 | TP=2904 FP=12775 TN=19318 FN=761 | Privileged THO/ABD + channel dropout p=0.5 — diluted signal, reverted
+[EXP-008] | no_change | bACC=0.706 | F1=0.312 | TP=2854 FP=11768 TN=20325 FN=811 | 6-ch with bandpass — slight regression, reverted to 4-ch
+[EXP-007] | improved  | bACC=0.712 | F1=0.313 | TP=2960 FP=12298 TN=19795 FN=705 | 4-ch ResNet (X,Y,envX,envY) — Hilbert envelope helps, spec=61.6%
+[EXP-006] | regressed | bACC=0.675 | F1=0.283 | TP=2827 FP=13505 TN=18588 FN=838 | PatchTransformer (4 layers, d=128) — worse than ResNet, reverted
+[EXP-005] | regressed | bACC=0.695 | F1=0.294 | TP=2998 FP=13739 TN=18354 FN=667 | WeightedSampler + focal(gamma=1) no pos_weight — threshold collapsed to 0.13, worse spec
+[EXP-004] | improved  | bACC=0.705 | F1=0.304 | TP=2988 FP=13018 TN=19075 FN=677 | ResNet1D + attn pool + augmentation + early stop epoch 18; sens=81.5% spec=59.4%, pos_weight too aggressive
+[EXP-003] | improved  | bACC=0.688 | F1=0.292 | TP=2880 FP=13152 TN=18941 FN=785 | Early stopping (epoch 13) + threshold=0.45 tuning; sensitivity=78.6% but specificity=59% still too many FP
+[EXP-002] | improved  | bACC=0.659 | F1=0.287 | TP=2334 FP=10260 TN=21833 FN=1331 | 1D multi-scale CNN (kernels 7/21/51) + focal loss + cosine LR, 30 epochs — peaks epoch 5, then overfits; too many FP
+[EXP-001] | regressed | bACC=0.519 | F1=0.081 | TP=164 FP=240 TN=31853 FN=3501 | Baseline: RF(300 trees, balanced) on 37 hand-crafted BCG X/Y spectral+time features — severely underfit on val, model memorises train

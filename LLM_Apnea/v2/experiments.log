@@ -1,0 +1,10 @@
+# Apnea Analysis — Experiment Log
+# Format: [ID] | [Status] | [bACC] | [F1] | [TP/FP/TN/FN] | [Description]
+[EXP-001] | baseline  | bACC=0.72 | F1=0.71 | TP=17 FP=6 TN=19 FN=8  | Handcrafted features (spectral, amplitude, temporal, respiratory, cross-channel) + GBM classifier
+[EXP-002] | improved  | bACC=0.74 | F1=0.72 | TP=17 FP=5 TN=20 FN=8  | Added envelope/modulation, autocorrelation, multi-scale energy features + switched to LogisticRegression(C=0.1)
+[EXP-003] | regressed | bACC=0.68 | F1=0.68 | TP=17 FP=8 TN=17 FN=8  | L1 feature selection (C=0.5) + threshold tuning — too aggressive, reverted
+[EXP-004] | improved  | bACC=0.76 | F1=0.75 | TP=18 FP=5 TN=20 FN=7  | PCA(10 components, 84.5% var) + LogReg(C=0.1, L2)
+[EXP-005] | improved  | bACC=0.80 | F1=0.81 | TP=21 FP=6 TN=19 FN=4  | PCA(15) + LogReg(C=0.5, L2) — big FN improvement
+[EXP-006] | improved  | bACC=0.82 | F1=0.84 | TP=23 FP=7 TN=18 FN=2  | Added wavelet decomposition features (83 total) + PCA(15) + LogReg(C=0.2)
+[EXP-007] | no_change | bACC=0.80 | F1=0.81 | TP=22 FP=7 TN=18 FN=3  | Added spectrogram features (91 total) — diluted PCA, reverted
+[EXP-008] | regressed | bACC=0.80 | F1=0.81 | TP=22 FP=7 TN=18 FN=3  | CNN + LR ensemble — CNN overfits on 50 samples (0.70), reverted

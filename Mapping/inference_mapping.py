@@ -5,7 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 from Code.utils import seed_everything, choose_gpu_by_model_process_count
-from utils_mapping import npy2dataset_REC, npy2dataset_REC_inference
+from utils_mapping import npy2dataset_REC, npy2dataset_REC_inference, npy2dataset_REC_inference_aligned
 from utils_dl_mapping import inference_REC
 from Code.models.rec import  PatchTST_REC, VTCN_ED
 import argparse
@@ -36,7 +36,7 @@ if __name__ == "__main__":
 	
 	
 	for fold_idx in range(1, 5):
-		model_save_fold_name = f'Mapping/Models/{args.XYZ}_60s_REC/fold{fold_idx}/'
+		model_save_fold_name = f'Mapping/Models/{args.XYZ}_60s_REC_aligned_zscore/fold{fold_idx}/'
 		if Model == 'PatchTST':
 			patch_len = 24
 			n_layers = 4
@@ -58,7 +58,7 @@ if __name__ == "__main__":
 		else:
 			out_channels = 1
 			n_hid = 32
-			n_block = 7
+			n_block = 5
 			kernel_size = 7
 			model = VTCN_ED(input_size = len(args.XYZ), 
 						output_size = out_channels,
@@ -69,16 +69,20 @@ if __name__ == "__main__":
 			model_save_dir = f'{model_save_fold_name}/VTCN_nhid{n_hid}_nblock{n_block}_kernel{kernel_size}/'
 
 		if not os.path.exists(model_save_dir): os.makedirs(model_save_dir, exist_ok=True)		
-		
-		best_model_path = os.listdir(model_save_dir)[-1]
+		# print(model_save_dir)}')
+		# print(f'{os.listdir(moel_save_dir)}')
+
+		best_model_path = sorted(os.listdir(model_save_dir), key=lambda x: float(x.split('_')[1].replace('.pth', '')))[0]
+
 		print(f'Loading best model from {model_save_dir}/{best_model_path} ...')
 		model.load_state_dict(torch.load(f'{model_save_dir}/{best_model_path}', map_location=device)['model_state_dict'])
 		
 		model.to(device)
 
 		data_path = f'Data/fold_data_p109_{Type}_60s/'
-		test_loader = npy2dataset_REC_inference(data_path, fold_idx, args)
-		res_save_dir = f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Mapping/figs/mapping/'
+		test_loader = npy2dataset_REC_inference_aligned(data_path, fold_idx, args)
+		# test_loader = npy2dataset_REC_inference(data_path, fold_idx, args)
+		res_save_dir = f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Mapping/figs/mapping_aligned_zscore_57/'
 		inference_REC(
 			model=model,
 			test_loader=test_loader,

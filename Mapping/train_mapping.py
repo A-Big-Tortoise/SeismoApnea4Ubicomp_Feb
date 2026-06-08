@@ -5,7 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 from Code.utils import seed_everything, choose_gpu_by_model_process_count
-from utils_mapping import npy2dataset_REC
+from utils_mapping import npy2dataset_REC, npy2dataset_REC_aligned
 from utils_dl_mapping import train_REC
 from Code.models.rec import  PatchTST_REC, VTCN_ED
 import argparse
@@ -17,9 +17,10 @@ from torch.optim.lr_scheduler import StepLR
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Apnea Detection - BSG')
 	parser.add_argument('--seed', type=int, default=42)
-	parser.add_argument('--seq_len', type=int, default=590)
+	# parser.add_argument('--seq_len', type=int, default=590)
+	parser.add_argument('--seq_len', type=int, default=560)
 	parser.add_argument('--batch_size', type=int, default=256)
-	parser.add_argument('--epochs', type=int, default=75)
+	parser.add_argument('--epochs', type=int, default=100)
 	parser.add_argument('--lr', type=float, default=2e-4)
 	parser.add_argument('--dropout', type=float, default=0.2) 
 	parser.add_argument('--XYZ', type=str, default='XY')
@@ -39,7 +40,7 @@ if __name__ == "__main__":
 	
 	
 	for fold_idx in range(1, 5):
-		model_save_fold_name = f'Mapping/Models/{args.XYZ}_60s_REC/fold{fold_idx}/'
+		model_save_fold_name = f'Mapping/Models/{args.XYZ}_60s_REC_aligned_zscore/fold{fold_idx}/'
 		if Model == 'PatchTST':
 			patch_len = 24
 			n_layers = 4
@@ -75,10 +76,12 @@ if __name__ == "__main__":
 		
 		model.to(device)
 
+		# optimizer = torch.optim.Adam(model.parameters(), lr=args.lr * 5)
 		optimizer = torch.optim.Adam(model.parameters(), lr=args.lr * 5)
 		scheduler = StepLR(optimizer, step_size=30, gamma=0.9)
 		data_path = f'Data/fold_data_p109_{Type}_60s/'
-		train_loader, val_loader, test_loader = npy2dataset_REC(data_path, fold_idx, args)
+		# train_loader, val_loader, test_loader = npy2dataset_REC(data_path, fold_idx, args)
+		train_loader, val_loader, test_loader = npy2dataset_REC_aligned(data_path, fold_idx, args)
 
 		train_REC(
 			model=model,

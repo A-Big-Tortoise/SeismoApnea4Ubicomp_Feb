@@ -8,6 +8,29 @@ sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
 sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
+from scipy.signal import butter, filtfilt
+
+
+def low_pass_filter(data, Fs, low, order):
+	b, a = butter(order, low/(Fs * 0.5), 'low')
+
+	if data.ndim == 1:
+		N = len(data)
+		padded = np.pad(data, (N, N), mode='reflect')
+	elif data.ndim == 2:
+		N = data.shape[1]
+		padded = np.pad(data, ((0, 0), (N, N)), mode='reflect')
+	
+	filtered_data = filtfilt(b, a, padded)
+
+	if data.ndim == 1:
+		filtered_data = filtered_data[N:-N]
+	elif data.ndim == 2:
+		filtered_data = filtered_data[:, N:-N]
+	
+	return filtered_data
+
+
 
 class ApneaDataset_REC(Dataset):
     def __init__(self, data, labels_THO, labels_ABD,labels_stage, labels_apnea, others=None):
@@ -59,6 +82,9 @@ def train_REC(model, train_loader, val_loader,
 			optimizer.zero_grad()
 			rec_tho, rec_abd = model(data)
 
+			rec_tho = (rec_tho - rec_tho.mean(dim=1, keepdim=True)) / (rec_tho.std(dim=1, keepdim=True) + 1e-8)
+			rec_abd = (rec_abd - rec_abd.mean(dim=1, keepdim=True)) / (rec_abd.std(dim=1, keepdim=True) + 1e-8)
+
 			# ===== Reconstruction Loss =====
 			loss_rec_tho = F.mse_loss(rec_tho, labels_tho, reduction='mean')
 			loss_rec_abd = F.mse_loss(rec_abd, labels_abd, reduction='mean')
@@ -82,6 +108,10 @@ def train_REC(model, train_loader, val_loader,
 			for data, labels_tho, labels_abd, labels_stage, labels_apnea, others in val_loader:
 				data, labels_tho, labels_abd = data.to(device), labels_tho.to(device), labels_abd.to(device)
 				rec_tho, rec_abd = model(data)
+
+
+				rec_tho = (rec_tho - rec_tho.mean(dim=1, keepdim=True)) / (rec_tho.std(dim=1, keepdim=True) + 1e-8)
+				rec_abd = (rec_abd - rec_abd.mean(dim=1, keepdim=True)) / (rec_abd.std(dim=1, keepdim=True) + 1e-8)
 
 				# ===== Reconstruction Loss =====
 				loss_rec_tho = F.mse_loss(rec_tho, labels_tho, reduction='mean')
@@ -120,17 +150,30 @@ def inference_REC(model, test_loader, device, save_dir):
 		for data, labels_tho, labels_abd, labels_stage, labels_apnea, others in test_loader:
 			data, labels_tho, labels_abd = data.to(device), labels_tho.to(device), labels_abd.to(device)
 			rec_tho, rec_abd = model(data)
-			random_idx = np.random.choice(data.size(0), size=5, replace=False)
+			random_idx = np.random.choice(data.size(0), size=6, replace=False)
 			for i in random_idx:
 				save_path = os.path.join(save_dir, f'sample_{i}.png')
 
-				fig, axes = plt.subplots(6, 1, figsize=(12, 9), sharex=True)
+				fig, axes = plt.subplots(3, 1, figsize=(12, 6), sharex=True)
 				axes[0].plot(data[i, 0].cpu().numpy(), label='X')
-				axes[1].plot(data[i, 1].cpu().numpy(), label='Y')
-				axes[2].plot(labels_tho[i].cpu().numpy(), label='THO True')
-				axes[3].plot(labels_abd[i].cpu().numpy(), label='ABD True')
-				axes[4].plot(rec_tho[i].cpu().numpy(), label='THO Rec')
-				axes[5].plot(rec_abd[i].cpu().numpy(), label='ABD Rec')
+				axes[0].plot(data[i, 1].cpu().numpy(), label='Y')
+				axes[1].plot(labels_tho[i].cpu().numpy(), label='THO True')
+				axes[1].plot(labels_abd[i].cpu().numpy(), label='ABD True')
+				# axes[2].plot(rec_tho[i].cpu().numpy(), label='THO Rec')
+				# axes[2].plot(rec_abd[i].cpu().numpy(), label='ABD Rec')
+				rec_tho_np = rec_tho[i].cpu().numpy()
+				rec_abd_np = rec_abd[i].cpu().numpy()
+				print(rec_tho_np)
+				rec_tho_np = low_pass_filter(rec_tho_np, 10, 0.8, order=3)
+				rec_abd_np = low_pass_filter(rec_abd_np, 10, 0.8, order=3)
+				rec_tho_np = (rec_tho_np - np.mean(rec_tho_np)) / np.std(rec_tho_np) 
+				rec_abd_np = (rec_abd_np - np.mean(rec_abd_np)) / np.std(rec_abd_np) 
+				axes[2].plot(rec_tho_np, label='THO Rec (Filtered)')
+				axes[2].plot(rec_abd_np, label='ABD Rec (Filtered)')
+				axes[0].set_title('Input Signals')
+				axes[1].set_title('True THO/ABD')
+				
+
 				for ax in axes:
 					ax.legend()
 				plt.tight_layout()
