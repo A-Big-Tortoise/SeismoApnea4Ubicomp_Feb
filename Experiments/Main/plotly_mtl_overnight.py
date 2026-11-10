@@ -31,12 +31,14 @@ plt.rcParams.update({
 
 
 if __name__ == "__main__":
-	data_folder = 'Data/data_60s_30s_yingjian2/'
+	data_folder = os.environ.get('DATA_FOLDER', 'Data/data_60s_30s_yingjian2/')
 	duration = 60
 	overlap = 30
-	cuda = '0'
-	cuda = choose_gpu_by_model_process_count()
-	device = torch.device(f"cuda:{cuda}" if torch.cuda.is_available() else "cpu")
+	if torch.cuda.is_available():
+		cuda = choose_gpu_by_model_process_count()
+		device = torch.device(f"cuda:{cuda}")
+	else:
+		device = torch.device("cpu")
 	df = pd.read_excel('Code/SleepLab.xlsx', engine='openpyxl', sheet_name='Logs')
 
 	id2fold = {}
@@ -66,8 +68,6 @@ if __name__ == "__main__":
 		data = np.load(os.path.join(data_folder, file))
 		ID_npy = data[0, -2]	
 # 
-		if ID_npy not in [15, 18, 83]: continue
-
 		# ============ Data Check ============
 		
 		if ID_npy not in id2fold: continue
@@ -181,9 +181,15 @@ if __name__ == "__main__":
 		_, n_apnea_events = count_continuous_ones(pred_res_processed)
 		sleep_time_pred = np.sum(pred_res_sleep==0)  / (3600 / (step_sig_sleep / 10))
 		AHI_preds_processed_label = n_apnea_events / sleep_time_pred
+		ahi_absolute_error = abs(AHI_preds_processed_label - AHI_label)
 
 		print(f'# Apnea Events: {n_apnea_events}, AHI (predicted): {AHI_preds_processed_label:.2f}')
 		print(f'# True Apnea Events: {n_true_apnea_events}, AHI (labels): {AHI_label:.2f}')
+		print(f'AHI absolute error: {ahi_absolute_error:.2f}')
+
+		if ahi_absolute_error >= 5:
+			print('Skipping plot because AHI absolute error is not below 5.\n')
+			continue
 		
 		
 		

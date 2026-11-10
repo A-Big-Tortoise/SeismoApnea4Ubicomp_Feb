@@ -3,6 +3,7 @@ import re
 from influxdb import InfluxDBClient
 import operator
 from datetime import datetime
+from pathlib import Path
 import pytz
 import numpy as np
 import warnings
@@ -16,12 +17,12 @@ plt.rcParams.update({
 		# 'font.family': 'Times New Roman',   # 字体
 		'font.serif': ['Times New Roman', 'Times', 'DejaVu Serif'],
 
-		'font.size': 20,                    # 默认字体大小
-		'axes.titlesize': 24,               # 子图标题
-		'axes.labelsize': 22,               # x/y 轴标签
-		'xtick.labelsize': 20,              # x 轴刻度
-		'ytick.labelsize': 20,              # y 轴刻度
-		'legend.fontsize': 20,              # 图例
+		'font.size': 24,                    # 默认字体大小
+		'axes.titlesize': 28,               # 子图标题
+		'axes.labelsize': 26,               # x/y 轴标签
+		'xtick.labelsize': 24,              # x 轴刻度
+		'ytick.labelsize': 24,              # y 轴刻度
+		'legend.fontsize': 24,              # 图例
 	})
 
 
@@ -164,7 +165,16 @@ if __name__ == "__main__":
 						table_name='SleepLab_test_5', data_name='RERAs', 
 						start_timestamp=start_time, end_timestamp=end_time)
 
-
+		data_dir = Path('/home/jiayu/SeismoApnea4Ubicomp_Feb/Infos/data_An/percom') / TYPE
+		data_dir.mkdir(parents=True, exist_ok=True)
+		np.savez_compressed(
+			data_dir / 'comparison_data.npz',
+			X=X, Y=Y, Z=Z, Effort_THO=Effort_THO, Effort_ABD=Effort_ABD,
+			TFlow=TFlow, PFlow_1=PFlow_1, Events=Events, RERAs=RERAs,
+			mac=MAC, room=Room, start_time=start_time, end_time=end_time,
+			start_time_bsg=start_time_bsg, end_time_bsg=end_time_bsg,
+		)
+		
 		X = -X	
 		Z = -Z	
 		final_event = Events
@@ -178,7 +188,7 @@ if __name__ == "__main__":
 		lw = 3
 
 		# fig, axes = plt.subplots(row, 1, figsize=(12, 3.35 *  row), sharex=True)
-		fig, axes = plt.subplots(row, 1, figsize=(16, 3.35 *  row), sharex=True)
+		fig, axes = plt.subplots(row, 1, figsize=(18, 3.35 * row), sharex=True)
 		axes[0].plot(time, signal_process(X), label='X (filt)', linewidth=lw)
 		axes[0].plot(time, signal_process(Y), label='Y (filt)', linewidth=lw)
 		axes[1].plot(time, normalize_1d(Effort_THO), label='THO', linewidth=lw)
@@ -200,7 +210,7 @@ if __name__ == "__main__":
 			ax.set_title(title)
 		plt.xlabel('Time [sec]')
 		plt.tight_layout()
-		plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Infos/figs_An/{TYPE}_comparison_long.png', bbox_inches='tight', dpi=300)
+		plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Infos/figs_An/{TYPE}_comparison_percom.png', bbox_inches='tight', dpi=300)
 		plt.close()
 
 			

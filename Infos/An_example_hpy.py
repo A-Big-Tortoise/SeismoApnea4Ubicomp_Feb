@@ -3,6 +3,7 @@ import re
 from influxdb import InfluxDBClient
 import operator
 from datetime import datetime
+from pathlib import Path
 import pytz
 import numpy as np
 import warnings
@@ -10,22 +11,17 @@ warnings.filterwarnings("ignore")
 import matplotlib.pyplot as plt
 from tqdm import trange
 from download_data_apnea import resample_poly, low_pass_filter, normalize_1d
-import os, sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb/Code')
-sys.path.append('/home/jiayu/SeismoApnea4Ubicomp_Feb')
-from Code.utils_dsp import modify_magnitude_with_gaussian_noise
 
 plt.rcParams.update({
 		# 'font.family': 'Times New Roman',   # 字体
 		'font.serif': ['Times New Roman', 'Times', 'DejaVu Serif'],
 
-		'font.size': 20,                    # 默认字体大小
-		'axes.titlesize': 24,               # 子图标题
-		'axes.labelsize': 22,               # x/y 轴标签
-		'xtick.labelsize': 20,              # x 轴刻度
-		'ytick.labelsize': 20,              # y 轴刻度
-		'legend.fontsize': 20,              # 图例
+		'font.size': 24,                    # 默认字体大小
+		'axes.titlesize': 28,               # 子图标题
+		'axes.labelsize': 26,               # x/y 轴标签
+		'xtick.labelsize': 24,              # x 轴刻度
+		'ytick.labelsize': 24,              # y 轴刻度
+		'legend.fontsize': 24,              # 图例
 	})
 
 
@@ -318,6 +314,16 @@ if __name__ == "__main__":
 						table_name='SleepLab_test_5', data_name='RERAs', 
 						start_timestamp=start_time, end_timestamp=end_time)
 
+		data_dir = Path('/home/jiayu/SeismoApnea4Ubicomp_Feb/Infos/data_An/percom') / TYPE
+		data_dir.mkdir(parents=True, exist_ok=True)
+		np.savez_compressed(
+			data_dir / 'comparison_data.npz',
+			X=X, Y=Y, Z=Z, Effort_THO=Effort_THO, Effort_ABD=Effort_ABD,
+			TFlow=TFlow, PFlow_1=PFlow_1, Events=Events, RERAs=RERAs,
+			mac=MAC, room=Room, start_time=start_time, end_time=end_time,
+			start_time_bsg=start_time_bsg, end_time_bsg=end_time_bsg,
+		)
+
 		final_event = Events
 		Flow = TFlow
 
@@ -329,7 +335,7 @@ if __name__ == "__main__":
 		row = 3
 		lw = 3
 
-		fig, axes = plt.subplots(row, 1, figsize=(16, 3.35 *  row), sharex=True)
+		fig, axes = plt.subplots(row, 1, figsize=(18, 3.35 * row), sharex=True)
 		X_y = signal_process(Y, low=0.5)
 		X_y = modify_magnitude_multi_freq_noise(X_y )
 		
@@ -360,5 +366,5 @@ if __name__ == "__main__":
 			ax.set_title(title)
 		plt.xlabel('Time [sec]')
 		plt.tight_layout()
-		plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Infos/figs_An/{TYPE}_comparison_long.png', bbox_inches='tight', dpi=300)
+		plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Infos/figs_An/{TYPE}_comparison_percom.png', bbox_inches='tight', dpi=300)
 		plt.close()

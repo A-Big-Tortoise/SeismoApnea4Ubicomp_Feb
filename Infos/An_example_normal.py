@@ -3,6 +3,7 @@ import re
 from influxdb import InfluxDBClient
 import operator
 from datetime import datetime
+from pathlib import Path
 import pytz
 import numpy as np
 import warnings
@@ -17,12 +18,12 @@ plt.rcParams.update({
 		# 'font.family': 'Times New Roman',   # 字体
 		'font.serif': ['Times New Roman', 'Times', 'DejaVu Serif'],
 
-		'font.size': 14,                    # 默认字体大小
-		'axes.titlesize': 16,               # 子图标题
-		'axes.labelsize': 16,               # x/y 轴标签
-		'xtick.labelsize': 14,              # x 轴刻度
-		'ytick.labelsize': 14,              # y 轴刻度
-		'legend.fontsize': 14,              # 图例
+		'font.size': 24,                    # 默认字体大小
+		'axes.titlesize': 28,               # 子图标题
+		'axes.labelsize': 26,               # x/y 轴标签
+		'xtick.labelsize': 24,              # x 轴刻度
+		'ytick.labelsize': 24,              # y 轴刻度
+		'legend.fontsize': 24,              # 图例
 	})
 
 
@@ -34,6 +35,12 @@ def signal_process(sig):
 	sig = normalize_1d(sig)
 
 	return sig
+
+
+def effort_process(sig):
+	"""Suppress high-frequency noise while preserving respiratory motion."""
+	sig = low_pass_filter(sig, Fs=100, low=1.0, order=3)
+	return normalize_1d(sig)
 
 
 
@@ -163,6 +170,16 @@ if __name__ == "__main__":
 						table_name='SleepLab_test_5', data_name='RERAs', 
 						start_timestamp=start_time, end_timestamp=end_time)
 
+		data_dir = Path('/home/jiayu/SeismoApnea4Ubicomp_Feb/Infos/data_An/percom') / TYPE
+		data_dir.mkdir(parents=True, exist_ok=True)
+		np.savez_compressed(
+			data_dir / 'comparison_data.npz',
+			X=X, Y=Y, Z=Z, Effort_THO=Effort_THO, Effort_ABD=Effort_ABD,
+			TFlow=TFlow, PFlow_1=PFlow_1, Events=Events, RERAs=RERAs,
+			mac=MAC, room=Room, start_time=start_time, end_time=end_time,
+			start_time_bsg=start_time_bsg, end_time_bsg=end_time_bsg,
+		)
+
 
 
 		Flow = TFlow
@@ -173,7 +190,7 @@ if __name__ == "__main__":
 		lw = 3
 		alpha = 0.65
 		row = 3
-		fig, axes = plt.subplots(row, 1, figsize=(12, 2.35 *  row), sharex=True)
+		fig, axes = plt.subplots(row, 1, figsize=(15, 2.35 * row), sharex=True)
 		axes[0].plot(time, normalize_1d(X), label='X (norm)', alpha=alpha, linewidth=lw-1)
 		axes[0].plot(time, signal_process(X), label='X (filt)', linewidth=lw)
 		axes[1].plot(time, normalize_1d(Y), label='Y (norm)', alpha=alpha, linewidth=lw-1)
@@ -217,11 +234,11 @@ if __name__ == "__main__":
 
 
 		row = 3
-		fig, axes = plt.subplots(row, 1, figsize=(12, 2.35 *  row), sharex=True)
+		fig, axes = plt.subplots(row, 1, figsize=(15, 3.35 * row), sharex=True)
 		axes[0].plot(time, signal_process(X), label='X (filt)', linewidth=lw)
 		axes[0].plot(time, signal_process(Y), label='Y (filt)', linewidth=lw)
-		axes[1].plot(time, normalize_1d(Effort_THO), label='Thoracic', linewidth=lw)
-		axes[1].plot(time, normalize_1d(Effort_ABD), label='Abdominal', linewidth=lw)
+		axes[1].plot(time, effort_process(Effort_THO), label='THO', linewidth=lw)
+		axes[1].plot(time, effort_process(Effort_ABD), label='ABD', linewidth=lw)
 		axes[2].plot(time, normalize_1d(Flow), label='Airflow', linewidth=lw)
 		time_event = np.arange(0, len(Events)) / 100 * 10
 		Events = np.asarray(Events).squeeze()
@@ -246,8 +263,8 @@ if __name__ == "__main__":
 		]
 
 		for ax, title in zip(axes, titles):
-			ax.set_title(title, fontsize=16)
+			ax.set_title(title)
 		plt.xlabel('Time [sec]')
 		plt.tight_layout()
-		plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Infos/figs_An/{TYPE}_comparison_new.png', bbox_inches='tight', dpi=300)
+		plt.savefig(f'/home/jiayu/SeismoApnea4Ubicomp_Feb/Infos/figs_An/{TYPE}_comparison_percom.png', bbox_inches='tight', dpi=300)
 		plt.close()
